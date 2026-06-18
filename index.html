@@ -164,6 +164,12 @@
 
     <script>
         // === GAME DATA ===
+
+        // Helper to randomize an array
+        function shuffleArray(array) {
+        return array.sort(() => Math.random() - 0.5);
+        }
+        
         // Easily expand this array to add more levels or words!
         const gameData = [
             {
@@ -486,6 +492,7 @@
         // === STATE MANAGEMENT ===
         let currentLevelIndex = 0;
         let currentQuestionIndex = 0;
+        let shuffledQuestions = []; // New: holds the random order for the current level
         let isWaiting = false; // Prevents tapping while feedback audio plays
 
         // === DOM ELEMENTS ===
@@ -533,12 +540,19 @@
             speak(currentQ.audio);
         });function loadQuestion() {
             isWaiting = false; // Reset lock
+            // If we are at the start of a level (or first run), shuffle the questions
+            if (currentQuestionIndex === 0) {
+            // Create a copy of the questions and shuffle them
+            let allQuestions = [...gameData[currentLevelIndex].questions];
+            shuffledQuestions = shuffleArray(allQuestions).slice(0, 10); // Pick 10
+    }
             const currentLevel = gameData[currentLevelIndex];
             const currentQ = currentLevel.questions[currentQuestionIndex];
 
             // Update UI
-            progressIndicator.innerText = `${currentLevel.levelName} - Question ${currentQuestionIndex + 1} / ${currentLevel.questions.length}`;
+            progressIndicator.innerText = `${currentLevel.levelName} - Question ${currentQuestionIndex + 1} / 10`;
             displayText.innerText = currentQ.display;
+            optionsArea.innerHTML = '';
 
             // Clear old buttons
             optionsArea.innerHTML = '';
