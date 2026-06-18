@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reading Game</title>
+    <style>
+        /* === UI/UX Constraints & iPad Optimizations === */
+        * {
+            box-sizing: border-box;
+            /* Disable text selection and tap highlights so it feels like a native app */
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            /* Disable double-tap-to-zoom */
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f9f9f9; /* Soft off-white to prevent eye strain */
+            color: #222222; /* Charcoal text */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Standard hidden class for state management */
+        .hidden {
+            display: none !important;
+        }
+
+        /* === Layout Containers === */
+        .screen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        #start-screen, #end-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #game-screen {
+            justify-content: space-between;
+        }
+
+        /* === Top: Progress Indicator === */
+        #progress-indicator {
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 20px 0;
+            color: #555;
+            font-weight: normal;
+        }
+
+        /* === Middle: Listen Button & Display Text === */
+        #middle-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 40px; /* Ample spacing to prevent accidental taps */
+        }
+
+        .listen-btn {
+            background: #ffffff;
+            border: 3px solid #222222;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .listen-btn:active {
+            background: #eeeeee;
+        }
+
+        .listen-btn svg {
+            width: 50px;
+            height: 50px;
+            fill: #222222;
+        }
+
+        #display-text {
+            font-size: 4rem; /* Huge text for readability */
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* === Bottom: Option Buttons === */
+        #options-area {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 44px; /* Strict 44px minimum spacing for iPad targets */
+            padding-bottom: 60px;
+        }
+
+        .action-btn {
+            font-size: 2.5rem;
+            font-weight: bold;
+            padding: 24px 48px;
+            min-width: 180px;
+            min-height: 88px; /* Massive tap target */
+            border: 3px solid #222222;
+            background-color: #ffffff;
+            color: #222222;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .action-btn:active {
+            background-color: #e0e0e0;
+            transform: translateY(2px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="screen">
+        <h1 style="font-size: 4rem; margin-bottom: 60px;">Reading Game</h1>
+        <button class="action-btn" id="start-btn">Play</button>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <div id="progress-indicator">Level 1 - Question 1 / 5</div>
+        
+        <div id="middle-area">
+            <button class="listen-btn" id="listen-btn" aria-label="Listen">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </button>
+            <div id="display-text">The cat is ____</div>
+        </div>
+
+        <div id="options-area">
+            </div>
+    </div>
+
+    <div id="end-screen" class="screen hidden">
+        <h1 style="font-size: 4rem; margin-bottom: 60px;">All Done!</h1>
+        <button class="action-btn" id="restart-btn">Play Again</button>
+    </div>
+
+    <script>
+        // === GAME DATA ===
+        // Easily expand this array to add more levels or words!
+        const gameData = [
+            {
+                levelName: "Level 1",
+                questions: [
+                    { display: "The cat is ____", audio: "The cat is black. Find the word black.", correct: "black", choices: ["black", "blue"] },
+                    { display: "The sun is ____", audio: "The sun is hot. Find the word hot.", correct: "hot", choices: ["hot", "cold"] },
+                    { display: "I see a ____", audio: "I see a dog. Find the word dog.", correct: "dog", choices: ["dog", "cat"] },
+                    { display: "The sky is ____", audio: "The sky is blue. Find the word blue.", correct: "blue", choices: ["blue", "red"] }
+                ]
+            },
+            {
+                levelName: "Level 2",
+                questions: [
+                    { display: "____", audio: "Find the word: because.", correct: "because", choices: ["because", "before"] },
+                    { display: "____", audio: "Find the word: beautiful.", correct: "beautiful", choices: ["beautiful", "butter"] },
+                    { display: "____", audio: "Find the word: together.", correct: "together", choices: ["together", "today"] },
+                    { display: "____", audio: "Find the word: please.", correct: "please", choices: ["please", "play"] }
+                ]
+            },
+            {
+                levelName: "Level 3",
+                questions: [
+                    { display: "My friend is ____", audio: "My friend is beautiful. Find the word beautiful.", correct: "beautiful", choices: ["beautiful", "black"] },
+                    { display: "I like it ____ it is fun", audio: "I like it because it is fun. Find the word because.", correct: "because", choices: ["because", "but"] },
+                    { display: "We can play ____", audio: "We can play together. Find the word together.", correct: "together", choices: ["today", "together"] },
+                    { display: "Can I ____ have some?", audio: "Can I please have some? Find the word please.", correct: "please", choices: ["play", "please"] }
+                ]
+            }
+        ];
+
+        // === STATE MANAGEMENT ===
+        let currentLevelIndex = 0;
+        let currentQuestionIndex = 0;
+        let isWaiting = false; // Prevents tapping while feedback audio plays
+
+        // === DOM ELEMENTS ===
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const displayText = document.getElementById('display-text');
+        const listenBtn = document.getElementById('listen-btn');
+        const optionsArea = document.getElementById('options-area');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // === AUDIO ENGINE ===
+        function speak(text) {
+            // Cancel any currently playing speech to prevent overlap
+            window.speechSynthesis.cancel(); 
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.8; // Slow down slightly for 5-year-old comprehension
+            utterance.pitch = 1.1; // Slightly friendly pitch
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // === GAME FLOW ===
+        startBtn.addEventListener('click', () => {
+            // Unlocks audio context on iOS by triggering an empty speak event
+            speak(""); 
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            loadQuestion();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            currentLevelIndex = 0;
+            currentQuestionIndex = 0;
+            endScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            loadQuestion();
+        });
+
+        listenBtn.addEventListener('click', () => {
+            const currentQ = gameData[currentLevelIndex].questions[currentQuestionIndex];
+            speak(currentQ.audio);
+        });
+
+        function loadQuestion() {
+            isWaiting = false; // Reset lock
+            const currentLevel = gameData[currentLevelIndex];
+            const currentQ = currentLevel.questions[currentQuestionIndex];
+
+            // Update UI
+            progressIndicator.innerText = `${currentLevel.levelName} - Question ${currentQuestionIndex + 1} / ${currentLevel.questions.length}`;
+            displayText.innerText = currentQ.display;
+
+            // Clear old buttons
+            optionsArea.innerHTML = '';
+
+            // Randomize button order so she can't memorize position
+            const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
+
+            // Create new buttons
+            shuffledChoices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'action-btn';
+                btn.innerText = choice;
+                btn.addEventListener('click', () => handleChoice(choice, currentQ.correct));
+                optionsArea.appendChild(btn);
+            });
+        }
+
+        function handleChoice(selectedChoice, correctChoice) {
+            if (isWaiting) return; // Prevent spam tapping
+
+            if (selectedChoice === correctChoice) {
+                isWaiting = true;
+                speak("Correct!");
+                
+                // Wait 1.5 seconds so she hears "Correct" before the screen changes
+                setTimeout(() => {
+                    advanceGame();
+                }, 1500);
+            } else {
+                // Read the incorrect word out loud so she learns it
+                speak(selectedChoice);
+            }
+        }
+
+        function advanceGame() {
+            currentQuestionIndex++;
+
+            // Check if level is finished
+            if (currentQuestionIndex >= gameData[currentLevelIndex].questions.length) {
+                currentQuestionIndex = 0;
+                currentLevelIndex++;
+
+                // Check if entire game is finished
+                if (currentLevelIndex >= gameData.length) {
+                    gameScreen.classList.add('hidden');
+                    endScreen.classList.remove('hidden');
+                    return;
+                }
+            }
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>
