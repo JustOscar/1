@@ -593,21 +593,20 @@
         }
 
         function advanceGame() {
-            currentQuestionIndex++;
+    currentQuestionIndex++;
 
-            // Check if level is finished
-            if (currentQuestionIndex >= gameData[currentLevelIndex].questions.length) {
-                currentQuestionIndex = 0;
-                currentLevelIndex++;
+    // Change: Check if we have hit 10 questions instead of the array length
+    if (currentQuestionIndex >= 10) { 
+        currentQuestionIndex = 0;
+        currentLevelIndex++;
 
-                // Check if entire game is finished
-                if (currentLevelIndex >= gameData.length) {
-                    gameScreen.classList.add('hidden');
-                    endScreen.classList.remove('hidden');
-                    return;
-                }
-            }
-            loadQuestion();
+        if (currentLevelIndex >= gameData.length) {
+            gameScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            return;
+        }
+    }
+    loadQuestion();
         }
     </script>
 </body>
