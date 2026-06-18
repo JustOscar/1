@@ -257,7 +257,12 @@
             // Clear old buttons
             optionsArea.innerHTML = '';
 
-            // Randomize button order so she can't memorize position
+            // --- ADDED THIS LINE BELOW ---
+            // Automatically speak the instruction when the question loads
+            speak(currentQ.audio);
+            // -----------------------------
+
+            // Randomize button order
             const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
 
             // Create new buttons
