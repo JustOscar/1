@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Reading Game</title>
     <style>
         /* === UI/UX Constraints & iPad Optimizations === */
@@ -80,14 +80,15 @@
             color: #4CAF50;
             width: 90px;
             text-align: left;
+            user-select: none;
         }
 
         #reset-btn {
             position: absolute;
             top: 20px;
             right: 20px;
-            background-color: white;
-            color: black;
+            background-color: #f0f0f0; /* Soft grey instead of loud red */
+            color: #555555;
             border: 2px solid #222222;
             padding: 10px 16px;
             font-size: 1.1rem;
@@ -97,7 +98,7 @@
         }
 
         #reset-btn:active {
-            background-color: #cc3333;
+            background-color: #e0e0e0;
         }
 
         #home-btn {
@@ -175,7 +176,6 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 44px; /* Strict 44px minimum spacing for iPad targets */
-            padding-bottom: 60px;
         }
 
         .action-btn {
@@ -205,6 +205,56 @@
             cursor: not-allowed;
             transform: none !important;
             box-shadow: none !important;
+        }
+
+        /* === Claudio's iPad Safe Area Portrait Padding === */
+        @media (orientation: portrait) {
+            #options-area {
+                padding-bottom: max(60px, env(safe-area-inset-bottom, 60px));
+            }
+        }
+
+        /* === Claudio's Landscape Layout Optimizations === */
+        @media (orientation: landscape) {
+            .screen {
+                padding: 10px 20px;
+            }
+
+            .listen-btn {
+                width: 72px;
+                height: 72px;
+            }
+            
+            .listen-btn svg {
+                width: 36px;
+                height: 36px;
+            }
+
+            #middle-area {
+                gap: 20px;
+            }
+
+            #display-text {
+                font-size: 3rem;
+            }
+
+            #progress-indicator {
+                font-size: 1.2rem;
+                padding: 8px 0;
+                padding-left: 90px; /* Fix: Stops home button from overlapping text */
+            }
+
+            .action-btn {
+                font-size: 2.2rem;
+                padding: 18px 40px;
+                min-height: 72px;
+            }
+
+            #options-area {
+                gap: 28px;
+                /* Fix: Keeps bottom choices completely clear of iPad home swipe indicator bar */
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
@@ -720,43 +770,62 @@
             }
         }
 
-        // === AUDIO ENGINE ===
-        function speak(text) {
-            window.speechSynthesis.cancel(); 
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.85; 
-            utterance.pitch = 1.0; 
+        // === CLAUDIO'S STABLE AUDIO ENGINE FOR MOBILE IOS/BRAVE ===
+        let _voice = null;
 
-            const voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => 
-                v.name.includes('Premium') || 
-                v.name.includes('Enhanced') || 
-                v.name.includes('Siri')
-            );
+        function _pickVoice() {
+            const list = window.speechSynthesis.getVoices();
+            if (!list.length) return; // Wait for async load trigger
 
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-            }
-
-            window.speechSynthesis.speak(utterance);
+            _voice =
+                list.find(v => v.name === 'Samantha')                        // iOS en-US (Brave/Safari)
+                || list.find(v => v.name === 'Karen')                        // iOS en-AU
+                || list.find(v => v.lang === 'en-US' && v.localService)     // local US fallback
+                || list.find(v => v.lang.startsWith('en') && v.localService)// English regional local
+                || list.find(v => v.lang.startsWith('en'))                   // Remote English
+                || list[0];                                                   // Last resort
         }
 
-        // Initialize voices on system load
-        window.speechSynthesis.onvoiceschanged = () => {};
+        // Run immediately (Chrome desktop synchronously matches here)
+        _pickVoice();
+        // Fire asynchronously when iOS background processes finish loading voices
+        window.speechSynthesis.onvoiceschanged = _pickVoice;
+
+        function speak(text) {
+            // Fix for iOS 30-second background execution silence engine freeze
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+            window.speechSynthesis.cancel();
+
+            // iOS WebKit protection layout hack: standard 50ms delay between stack clearing
+            setTimeout(() => {
+                const utt = new SpeechSynthesisUtterance(text);
+                utt.lang   = 'en-US';
+                utt.rate   = 0.70; // Optimized comfortable pacing for early readers
+                utt.pitch  = 1.0;
+                utt.volume = 1.0;
+
+                if (_voice) utt.voice = _voice;
+
+                window.speechSynthesis.speak(utt);
+            }, 50);
+        }
+
+        // Safety Engine Ping Loop: Ensures iOS thread never hits active garbage collection freeze
+        setInterval(() => window.speechSynthesis.paused && window.speechSynthesis.resume(), 14000);
+
 
         // === APP NAVIGATION ACTIONS ===
         document.querySelectorAll('.level-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 currentLevelIndex = parseInt(e.target.getAttribute('data-level'));
                 currentQuestionIndex = 0; 
-                currentLevelScore = 0; // Fresh score tracking loop
+                currentLevelScore = 0; 
                 
-                // Shuffle immediately upon click
                 let allQuestions = [...gameData[currentLevelIndex].questions];
                 shuffledQuestions = shuffleArray(allQuestions).slice(0, 10);
 
-                // UI Screen flip
                 homeScreen.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 
@@ -771,8 +840,9 @@
             homeScreen.classList.remove('hidden');
         });
 
-        // Global Scores Reset logic
+        // Claudio's Confirmation Dialog Reset logic
         resetBtn.addEventListener('click', () => {
+            if (!confirm("Erase all scores and start over?")) return;
             completedScores = { 0: null, 1: null, 2: null, 3: null };
             localStorage.removeItem('readingGameScores');
             updateHomeMenu();
@@ -788,7 +858,7 @@
         // === CORE GAME ENGINE ===
         function loadQuestion() {
             isWaiting = false; 
-            isFirstTryForQuestion = true; // Reset try check context
+            isFirstTryForQuestion = true; 
             const currentLevel = gameData[currentLevelIndex];
             const currentQ = shuffledQuestions[currentQuestionIndex];
 
@@ -799,7 +869,6 @@
             optionsArea.innerHTML = '';
             speak(currentQ.audio);
 
-            // Shuffling buttons order output dynamically
             const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
 
             shuffledChoices.forEach(choice => {
@@ -817,7 +886,6 @@
             if (selectedChoice === correctChoice) {
                 isWaiting = true;
                 
-                // Score credit check
                 if (isFirstTryForQuestion) {
                     currentLevelScore++;
                 }
@@ -828,7 +896,7 @@
                     advanceGame();
                 }, 1500);
             } else {
-                isFirstTryForQuestion = false; // Mark error state flag
+                isFirstTryForQuestion = false; 
                 speak(selectedChoice);
             }
         }
@@ -837,14 +905,11 @@
             currentQuestionIndex++;
 
             if (currentQuestionIndex >= 10) { 
-                // Store structural records securely
                 completedScores[currentLevelIndex] = currentLevelScore;
                 localStorage.setItem('readingGameScores', JSON.stringify(completedScores));
                 
-                // Reset runtime values
                 currentQuestionIndex = 0;
                 
-                // Redraw states and navigate home
                 updateHomeMenu();
                 gameScreen.classList.add('hidden');
                 homeScreen.classList.remove('hidden');
@@ -856,7 +921,7 @@
             loadQuestion();
         }
 
-        // Initialize state display configuration on execution startup
+        // Initialize menu states on launch
         updateHomeMenu();
     </script>
 </body>
