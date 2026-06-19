@@ -42,6 +42,7 @@
             height: 100%;
             max-width: 800px;
             padding: 20px;
+            position: relative;
         }
 
         #home-screen {
@@ -53,13 +54,68 @@
         .menu-container {
             display: flex;
             flex-direction: column;
-            gap: 24px; /* Generous spacing between level buttons */
+            align-items: center;
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
+        }
+
+        /* Menu Rows for Buttons and Scores */
+        .level-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            width: 100%;
         }
 
         #game-screen {
             justify-content: space-between;
+        }
+
+        /* === Score Displays & Navigation Buttons === */
+        .level-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4CAF50;
+            width: 90px;
+            text-align: left;
+        }
+
+        #reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #ff4d4d;
+            color: white;
+            border: 2px solid #222222;
+            padding: 10px 16px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #reset-btn:active {
+            background-color: #cc3333;
+        }
+
+        #home-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #555555;
+            color: white;
+            border: 2px solid #222222;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #home-btn:active {
+            background-color: #333333;
         }
 
         /* === Top: Progress Indicator === */
@@ -140,21 +196,47 @@
             background-color: #e0e0e0;
             transform: translateY(2px);
         }
+
+        /* Disabled configuration for finished locked levels */
+        .level-btn:disabled {
+            background-color: #dddddd;
+            color: #888888;
+            border-color: #aaaaaa;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 <body>
 
     <div id="home-screen" class="screen">
+        <button id="reset-btn">Reset</button>
+        
         <h1 style="font-size: 4rem; margin-bottom: 40px;">Reading Game</h1>
         <div class="menu-container">
-            <button class="action-btn level-btn" data-level="0">Level 1</button>
-            <button class="action-btn level-btn" data-level="1">Level 2</button>
-            <button class="action-btn level-btn" data-level="2">Level 3</button>
-            <button class="action-btn level-btn" data-level="3">Level 4</button>
+            <div class="level-row">
+                <button class="action-btn level-btn" data-level="0">Level 1</button>
+                <span class="level-score" id="score-0"></span>
+            </div>
+            <div class="level-row">
+                <button class="action-btn level-btn" data-level="1">Level 2</button>
+                <span class="level-score" id="score-1"></span>
+            </div>
+            <div class="level-row">
+                <button class="action-btn level-btn" data-level="2">Level 3</button>
+                <span class="level-score" id="score-2"></span>
+            </div>
+            <div class="level-row">
+                <button class="action-btn level-btn" data-level="3">Level 4</button>
+                <span class="level-score" id="score-3"></span>
+            </div>
         </div>
     </div>
 
     <div id="game-screen" class="screen hidden">
+        <button id="home-btn">Home</button>
+        
         <div id="progress-indicator">Level 1 - Question 1 / 10</div>
         
         <div id="middle-area">
@@ -487,7 +569,7 @@
                     { display: "Look at the striped ____", audio: "Look at the striped pattern. Find the word pattern.", correct: "pattern", choices: ["pattern", "parent"] },
                     { display: "Color in your new ____", audio: "Color in your new drawing. Find the word drawing.", correct: "drawing", choices: ["drawing", "driving"] }
                 ]
-           }, // <-- Make sure this comma is here after Level 3's closing block
+            },
             {
                 levelName: "Level 4",
                 questions: [
@@ -539,7 +621,7 @@
                     { display: "I ____ my lost toy", audio: "I found my lost toy. Find the word found.", correct: "found", choices: ["found", "sound", "round"] },
                     { display: "You ____ wash your hands", audio: "You should wash your hands. Find the word should.", correct: "should", choices: ["could", "would", "should"] },
                     { display: "Sit in the ____ seat", audio: "Sit in the front seat. Find the word front.", correct: "front", choices: ["first", "front", "fruit"] },
-                    { display: "The shoes are too ____", audio: "The shoes are too tight. Find the word tight.", correct: "tight", choices: ["night", "light", "tight"] },
+                    { display: "The shoes are too ____", audio: "The shoes are too tight. Find the word tight.", correct: "tight", choices: ["tight", "night", "light"] },
                     { display: "Campfires make grey ____", audio: "Campfires make grey smoke. Find the word smoke.", correct: "smoke", choices: ["small", "smart", "smoke"] },
                     { display: "You won the first ____", audio: "You won the first prize. Find the word prize.", correct: "prize", choices: ["print", "proud", "prize"] },
                     { display: "Eat a ____ of pizza", audio: "Eat a slice of pizza. Find the word slice.", correct: "slice", choices: ["slide", "slice", "slime"] },
@@ -600,6 +682,11 @@
         let currentQuestionIndex = 0;
         let shuffledQuestions = []; 
         let isWaiting = false; 
+        
+        // Score trackers
+        let currentLevelScore = 0;
+        let isFirstTryForQuestion = true;
+        let completedScores = JSON.parse(localStorage.getItem('readingGameScores')) || { 0: null, 1: null, 2: null, 3: null };
 
         // === DOM ELEMENTS ===
         const homeScreen = document.getElementById('home-screen');
@@ -608,10 +695,29 @@
         const displayText = document.getElementById('display-text');
         const listenBtn = document.getElementById('listen-btn');
         const optionsArea = document.getElementById('options-area');
+        const homeBtn = document.getElementById('home-btn');
+        const resetBtn = document.getElementById('reset-btn');
 
         // === SHUFFLE HELPER ===
         function shuffleArray(array) {
             return array.sort(() => Math.random() - 0.5);
+        }
+
+        // === UI UPDATER FOR HOME MENU ===
+        function updateHomeMenu() {
+            for (let i = 0; i < 4; i++) {
+                const scoreSpan = document.getElementById(`score-${i}`);
+                const btn = document.querySelector(`.level-btn[data-level="${i}"]`);
+                const savedScore = completedScores[i];
+
+                if (savedScore !== null) {
+                    scoreSpan.textContent = `${savedScore}/10`;
+                    btn.disabled = true; // Lock level out
+                } else {
+                    scoreSpan.textContent = '';
+                    btn.disabled = false; // Keep it unlocked
+                }
+            }
         }
 
         // === AUDIO ENGINE ===
@@ -636,30 +742,44 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // Initialize voices for iOS
+        // Initialize voices on system load
         window.speechSynthesis.onvoiceschanged = () => {};
 
-        // === HOMEPAGE EVENT LISTENERS ===
+        // === APP NAVIGATION ACTIONS ===
         document.querySelectorAll('.level-btn').forEach(button => {
             button.addEventListener('click', (e) => {
-                // Set the level index based on the button's data attribute
                 currentLevelIndex = parseInt(e.target.getAttribute('data-level'));
-                currentQuestionIndex = 0; // Always start at first question
+                currentQuestionIndex = 0; 
+                currentLevelScore = 0; // Fresh score tracking loop
                 
-                // Shuffle data immediately upon selection
+                // Shuffle immediately upon click
                 let allQuestions = [...gameData[currentLevelIndex].questions];
                 shuffledQuestions = shuffleArray(allQuestions).slice(0, 10);
 
-                // Transition screens
+                // UI Screen flip
                 homeScreen.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 
-                // Load the first question
                 loadQuestion();
             });
         });
 
-        // Re-listen functionality
+        // In-game Home button logic
+        homeBtn.addEventListener('click', () => {
+            window.speechSynthesis.cancel();
+            gameScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+        });
+
+        // Global Scores Reset logic
+        resetBtn.addEventListener('click', () => {
+            completedScores = { 0: null, 1: null, 2: null, 3: null };
+            localStorage.removeItem('readingGameScores');
+            updateHomeMenu();
+            speak("Scores reset.");
+        });
+
+        // Re-listen mechanism
         listenBtn.addEventListener('click', () => {
             const currentQ = shuffledQuestions[currentQuestionIndex];
             speak(currentQ.audio);
@@ -668,23 +788,20 @@
         // === CORE GAME ENGINE ===
         function loadQuestion() {
             isWaiting = false; 
+            isFirstTryForQuestion = true; // Reset try check context
             const currentLevel = gameData[currentLevelIndex];
             const currentQ = shuffledQuestions[currentQuestionIndex];
 
-            // Update UI
+            // Update Header Display
             progressIndicator.innerText = `${currentLevel.levelName} - Question ${currentQuestionIndex + 1} / 10`;
             displayText.innerText = currentQ.display;
 
-            // Clear old buttons
             optionsArea.innerHTML = '';
-
-            // Play audio automatically
             speak(currentQ.audio);
 
-            // Randomize choice buttons layout order
+            // Shuffling buttons order output dynamically
             const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
 
-            // Ingest new option elements
             shuffledChoices.forEach(choice => {
                 const btn = document.createElement('button');
                 btn.className = 'action-btn';
@@ -699,12 +816,19 @@
 
             if (selectedChoice === correctChoice) {
                 isWaiting = true;
+                
+                // Score credit check
+                if (isFirstTryForQuestion) {
+                    currentLevelScore++;
+                }
+
                 speak("Correct!");
                 
                 setTimeout(() => {
                     advanceGame();
                 }, 1500);
             } else {
+                isFirstTryForQuestion = false; // Mark error state flag
                 speak(selectedChoice);
             }
         }
@@ -712,21 +836,28 @@
         function advanceGame() {
             currentQuestionIndex++;
 
-            // Strict boundary: If they finish the 10th question, exit back to homepage
             if (currentQuestionIndex >= 10) { 
+                // Store structural records securely
+                completedScores[currentLevelIndex] = currentLevelScore;
+                localStorage.setItem('readingGameScores', JSON.stringify(completedScores));
+                
+                // Reset runtime values
                 currentQuestionIndex = 0;
                 
-                // Transition screens back to home
+                // Redraw states and navigate home
+                updateHomeMenu();
                 gameScreen.classList.add('hidden');
                 homeScreen.classList.remove('hidden');
                 
-                // Friendly closing audio cue
-                speak("Great job! Choose another level.");
+                speak("Great job! You finished the level.");
                 return;
             }
             
             loadQuestion();
         }
+
+        // Initialize state display configuration on execution startup
+        updateHomeMenu();
     </script>
 </body>
 </html>
