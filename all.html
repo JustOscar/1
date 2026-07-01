@@ -1999,7 +1999,12 @@
                 currentSpellingIndex = 0;
                 strictTypedWord = "";
                 renderKeyboardDisplay();
-                speak(currentQ.audio);
+                // Dynamically append the checkmark instruction only in Strict Mode
+                let speechText = currentQ.audio;
+                if (currentQuestionIndex >= 5) {
+                    speechText += " and press the check mark.";
+                }
+                speak(speechText);
 
                 optionsArea.innerHTML = '';
                 const keyboardContainer = document.createElement('div');
