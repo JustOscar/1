@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Reading Game</title>
+    <style>
+        /* === UI/UX Constraints & iPad Optimizations === */
+        * {
+            box-sizing: border-box;
+            /* Disable text selection and tap highlights so it feels like a native app */
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            /* Disable double-tap-to-zoom */
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f9f9f9; /* Soft off-white to prevent eye strain */
+            color: #222222; /* Charcoal text */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Standard hidden class for state management */
+        .hidden {
+            display: none !important;
+        }
+
+        /* === Layout Containers === */
+        .screen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            max-width: 900px; /* Widened to accommodate dual column spacing comfortably */
+            padding: 20px;
+            position: relative;
+        }
+
+        #home-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        /* Responsive Flex Wrapper for Layout Columns */
+        .menu-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 48px; /* Distinct visual partition separating column profiles */
+            width: 100%;
+        }
+
+        /* Structural Design Columns */
+        .menu-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 380px;
+        }
+
+        /* Menu Rows for Buttons and Scores */
+        .level-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        #game-screen {
+            justify-content: space-between;
+        }
+
+        /* === Score Displays & Navigation Buttons === */
+        .level-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4CAF50;
+            width: 90px;
+            text-align: left;
+            user-select: none;
+        }
+
+        #reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #ffffff; 
+            color: #222222;
+            border: 2px solid #222222;
+            padding: 10px 16px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #reset-btn:active {
+            background-color: #e0e0e0;
+        }
+
+        /* Advanced Mode Toggle - Exactly matching reset button style specs */
+        #expand-btn {
+            position: absolute;
+            top: 75px; 
+            right: 20px;
+            background-color: #ffffff;
+            color: #222222;
+            border: 2px solid #222222;
+            padding: 10px 16px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 76px; /* Strict horizontal blueprint match */
+            text-align: center;
+        }
+
+        #expand-btn:active {
+            background-color: #e0e0e0;
+        }
+
+        #home-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #555555;
+            color: white;
+            border: 2px solid #222222;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #home-btn:active {
+            background-color: #333333;
+        }
+
+        /* === Top: Progress Indicator === */
+        #progress-indicator {
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 20px 0;
+            color: #555;
+            font-weight: normal;
+        }
+
+        /* === Middle: Listen Button & Display Text === */
+        #middle-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 40px; 
+        }
+
+        .listen-btn {
+            background: #ffffff;
+            border: 3px solid #222222;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .listen-btn:active {
+            background: #eeeeee;
+        }
+
+        .listen-btn svg {
+            width: 50px;
+            height: 50px;
+            fill: #222222;
+        }
+
+        #display-text {
+            font-size: 4rem; /* Huge text for readability */
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+            width: 100%;
+        }
+
+        /* === Bottom: Option Buttons === */
+        #options-area {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 44px; /* Strict 44px minimum spacing for iPad targets */
+            width: 100%;
+        }
+
+        .action-btn {
+            font-size: 2.5rem;
+            font-weight: bold;
+            padding: 24px 48px;
+            min-width: 180px;
+            min-height: 88px; /* Massive tap target */
+            border: 3px solid #222222;
+            background-color: #ffffff;
+            color: #222222;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .action-btn:active {
+            background-color: #e0e0e0;
+            transform: translateY(2px);
+        }
+
+        .level-btn:disabled {
+            background-color: #dddddd;
+            color: #888888;
+            border-color: #aaaaaa;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* === Custom Keyboard Input Layout for Level 7 === */
+        .keyboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .key-btn {
+            font-size: 1.8rem;
+            font-weight: bold;
+            height: 64px;
+            flex: 1;
+            min-width: 32px;
+            border: 3px solid #222222;
+            background-color: #ffffff;
+            color: #222222;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: lowercase;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            touch-action: manipulation;
+        }
+
+        .key-btn:active {
+            background-color: #e0e0e0;
+            transform: translateY(2px);
+        }
+
+        .key-btn.wide-key {
+            flex: 1.6;
+            font-size: 1.4rem;
+            text-transform: uppercase;
+        }
+
+        /* === iPad Safe Area Portrait Padding === */
+        @media (orientation: portrait) {
+            #options-area {
+                padding-bottom: max(60px, env(safe-area-inset-bottom, 60px));
+            }
+        }
+
+        /* === Landscape Layout Optimizations === */
+        @media (orientation: landscape) {
+            .screen {
+                padding: 10px 20px;
+            }
+
+            .listen-btn {
+                width: 72px;
+                height: 72px;
+            }
+            
+            .listen-btn svg {
+                width: 36px;
+                height: 36px;
+            }
+
+            #middle-area {
+                gap: 20px;
+            }
+
+            #display-text {
+                font-size: 3rem;
+            }
+
+            #progress-indicator {
+                font-size: 1.2rem;
+                padding: 8px 0;
+                padding-left: 90px;
+            }
+
+            .action-btn {
+                font-size: 2.2rem;
+                padding: 18px 40px;
+                min-height: 72px;
+            }
+
+            #options-area {
+                gap: 28px;
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+
+            .key-btn {
+                height: 48px;
+                font-size: 1.4rem;
+                border-radius: 8px;
+                border-width: 2px;
+            }
+            .key-btn.wide-key {
+                font-size: 1.1rem;
+            }
+            .keyboard-container {
+                gap: 5px;
+                padding: 2px;
+            }
+            .keyboard-row {
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="home-screen" class="screen">
+        <button id="reset-btn">Reset</button>
+        <button id="expand-btn">+</button>
+        
+        <h1 style="font-size: 4rem; margin-bottom: 40px; margin-top: 20px;">Reading Game</h1>
+        
+        <div class="menu-container">
+            
+            <div class="menu-column" id="standard-column">
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="0">Level 1</button>
+                    <span class="level-score" id="score-0"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="1">Level 2</button>
+                    <span class="level-score" id="score-1"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="2">Level 3</button>
+                    <span class="level-score" id="score-2"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="3">Level 4</button>
+                    <span class="level-score" id="score-3"></span>
+                </div>
+            </div>
+
+            <div class="menu-column hidden" id="advanced-column">
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="4">Level 5</button>
+                    <span class="level-score" id="score-4"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="5">Level 6</button>
+                    <span class="level-score" id="score-5"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="6">Level 7</button>
+                    <span class="level-score" id="score-6"></span>
+                </div>
+                <div class="level-row">
+                    <button class="action-btn level-btn" data-level="7">Level 8</button>
+                    <span class="level-score" id="score-7"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <button id="home-btn">Home</button>
+        <div id="progress-indicator">Level 1 - Question 1 / 10</div>
+        
+        <div id="middle-area">
+            <button class="listen-btn" id="listen-btn" aria-label="Listen">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </button>
+            <div id="display-text">The cat is ____</div>
+        </div>
+
+        <div id="options-area"></div>
+    </div>
+
+    <script>
+        // === GAME DATA ===
+        const gameData = [
+            {
+                levelName: "Level 1",
+                questions: [
+                    { display: "The cat is ____", audio: "The cat is black. Find the word black.", correct: "black", choices: ["black", "blue"] },
+                    { display: "The sun is ____", audio: "The sun is hot. Find the word hot.", correct: "hot", choices: ["hot", "cold"] },
+                    { display: "I see a ____", audio: "I see a dog. Find the word dog.", correct: "dog", choices: ["dog", "cat"] },
+                    { display: "The sky is ____", audio: "The sky is blue. Find the word blue.", correct: "blue", choices: ["blue", "red"] },
+                    { display: "The pig is ____", audio: "The pig is big. Find the word big.", correct: "big", choices: ["big", "bad"] },
+                    { display: "Milk is ____", audio: "Milk is white. Find the word white.", correct: "white", choices: ["white", "green"] },
+                    { display: "See the red ____", audio: "See the red ball. Find the word ball.", correct: "ball", choices: ["ball", "bell"] },
+                    { display: "The frog is ____", audio: "The frog is green. Find the word green.", correct: "green", choices: ["green", "good"] },
+                    { display: "An apple is ____", audio: "An apple is red. Find the word red.", correct: "red", choices: ["red", "run"] },
+                    { display: "The bus is ____", audio: "The bus is yellow. Find the word yellow.", correct: "yellow", choices: ["yellow", "yes"] },
+                    { display: "Look at the ____", audio: "Look at the moon. Find the word moon.", correct: "moon", choices: ["moon", "man"] },
+                    { display: "A fish can ____", audio: "A fish can swim. Find the word swim.", correct: "swim", choices: ["swim", "sit"] },
+                    { display: "The bird can ____", audio: "The bird can fly. Find the word fly.", correct: "fly", choices: ["fly", "fox"] },
+                    { display: "The ice is ____", audio: "The ice is cold. Find the word cold.", correct: "cold", choices: ["cold", "cake"] },
+                    { display: "Fire is ____", audio: "Fire is hot. Find the word hot.", correct: "hot", choices: ["hot", "hat"] },
+                    { display: "The tree is ____", audio: "The tree is tall. Find the word tall.", correct: "tall", choices: ["tall", "ten"] },
+                    { display: "My mom is ____", audio: "My mom is kind. Find the word kind.", correct: "kind", choices: ["kind", "king"] },
+                    { display: "The box is ____", audio: "The box is open. Find the word open.", correct: "open", choices: ["open", "over"] },
+                    { display: "A rock is ____", audio: "A rock is hard. Find the word hard.", correct: "hard", choices: ["hard", "hand"] },
+                    { display: "My bed is ____", audio: "My bed is soft. Find the word soft.", correct: "soft", choices: ["soft", "sad"] },
+                    { display: "I love my ____", audio: "I love my dad. Find the word dad.", correct: "dad", choices: ["dad", "dig"] },
+                    { display: "The cup is ____", audio: "The cup is full. Find the word full.", correct: "full", choices: ["full", "fall"] },
+                    { display: "The ant is ____", audio: "The ant is small. Find the word small.", correct: "small", choices: ["small", "stop"] },
+                    { display: "A bear is ____", audio: "A bear is big. Find the word big.", correct: "big", choices: ["big", "bug"] },
+                    { display: "The grass is ____", audio: "The grass is wet. Find the word wet.", correct: "wet", choices: ["wet", "win"] },
+                    { display: "The soup is ____", audio: "The soup is warm. Find the word warm.", correct: "warm", choices: ["warm", "with"] },
+                    { display: "The mud is ____", audio: "The mud is brown. Find the word brown.", correct: "brown", choices: ["brown", "black"] },
+                    { display: "I run very ____", audio: "I run very fast. Find the word fast.", correct: "fast", choices: ["fast", "fox"] },
+                    { display: "The snail is ____", audio: "The snail is slow. Find the word slow.", correct: "slow", choices: ["slow", "sad"] },
+                    { display: "A star is ____", audio: "A star is bright. Find the word bright.", correct: "bright", choices: ["bright", "blue"] },
+                    { display: "The room is ____", audio: "The room is dark. Find the word dark.", correct: "dark", choices: ["dark", "duck"] },
+                    { display: "The door is ____", audio: "The door is shut. Find the word shut.", correct: "shut", choices: ["shut", "ship"] },
+                    { display: "The baby is ____", audio: "The baby is happy. Find the word happy.", correct: "happy", choices: ["happy", "here"] },
+                    { display: "Do not cry or be ____", audio: "Do not cry or be sad. Find the word sad.", correct: "sad", choices: ["sad", "sun"] },
+                    { display: "The bag is ____", audio: "The bag is heavy. Find the word heavy.", correct: "heavy", choices: ["heavy", "help"] },
+                    { display: "Paper is ____", audio: "Paper is light. Find the word light.", correct: "light", choices: ["light", "look"] },
+                    { display: "A lemon is ____", audio: "A lemon is sour. Find the word sour.", correct: "sour", choices: ["sour", "some"] },
+                    { display: "Candy is ____", audio: "Candy is sweet. Find the word sweet.", correct: "sweet", choices: ["sweet", "swim"] },
+                    { display: "The water is ____", audio: "The water is deep. Find the word deep.", correct: "deep", choices: ["deep", "down"] },
+                    { display: "The well is ____", audio: "The well is dry. Find the word dry.", correct: "dry", choices: ["dry", "dog"] },
+                    { display: "I am a ____", audio: "I am a child. Find the word child.", correct: "child", choices: ["child", "chair"] },
+                    { display: "He is a ____", audio: "He is a boy. Find the word boy.", correct: "boy", choices: ["boy", "bag"] },
+                    { display: "She is a ____", audio: "She is a girl. Find the word girl.", correct: "girl", choices: ["girl", "good"] },
+                    { display: "The car is ____", audio: "The car is new. Find the word new.", correct: "new", choices: ["new", "not"] },
+                    { display: "The hat is ____", audio: "The hat is old. Find the word old.", correct: "old", choices: ["old", "out"] },
+                    { display: "The coat is ____", audio: "The coat is warm. Find the word warm.", correct: "warm", choices: ["warm", "well"] },
+                    { display: "The knife is ____", audio: "The knife is sharp. Find the word sharp.", correct: "sharp", choices: ["sharp", "ship"] },
+                    { display: "The road is ____", audio: "The road is long. Find the word long.", correct: "long", choices: ["long", "like"] },
+                    { display: "The line is ____", audio: "The line is short. Find the word short.", correct: "short", choices: ["short", "she"] },
+                    { display: "My hands are ____", audio: "My hands are clean. Find the word clean.", correct: "clean", choices: ["clean", "cold"] },
+                    { display: "The dog is ____", audio: "The dog is dirty. Find the word dirty.", correct: "dirty", choices: ["dirty", "duck"] },
+                    { display: "The shirt is ____", audio: "The shirt is loose. Find the word loose.", correct: "loose", choices: ["loose", "look"] },
+                    { display: "The knot is ____", audio: "The knot is tight. Find the word tight.", correct: "tight", choices: ["tight", "ten"] },
+                    { display: "The well is ____", audio: "The well is deep. Find the word deep.", correct: "deep", choices: ["deep", "day"] },
+                    { display: "The plate is ____", audio: "The plate is flat. Find the word flat.", correct: "flat", choices: ["flat", "fox"] },
+                    { display: "The hill is ____", audio: "The hill is steep. Find the word steep.", correct: "steep", choices: ["steep", "stop"] },
+                    { display: "The path is ____", audio: "The path is safe. Find the word safe.", correct: "safe", choices: ["safe", "see"] },
+                    { display: "The glass is ____", audio: "The glass is clear. Find the word clear.", correct: "clear", choices: ["clear", "cat"] },
+                    { display: "The orange is ____", audio: "The orange is round. Find the word round.", correct: "round", choices: ["round", "red"] },
+                    { display: "The block is ____", audio: "The block is square. Find the word square.", correct: "square", choices: ["square", "sun"] },
+                    { display: "The tea is ____", audio: "The tea is hot. Find the word hot.", correct: "hot", choices: ["hot", "hop"] },
+                    { display: "The clock says ____", audio: "The clock says tick. Find the word tick.", correct: "tick", choices: ["tick", "toes"] },
+                    { display: "The ring is ____", audio: "The ring is gold. Find the word gold.", correct: "gold", choices: ["gold", "good"] },
+                    { display: "The bell goes ____", audio: "The bell goes ding. Find the word ding.", correct: "ding", choices: ["ding", "dog"] },
+                    { display: "The bee can ____", audio: "The bee can buzz. Find the word buzz.", correct: "buzz", choices: ["buzz", "big"] },
+                    { display: "The duck says ____", audio: "The duck says quack. Find the word quack.", correct: "quack", choices: ["quack", "quick"] },
+                    { display: "The cow says ____", audio: "The cow says moo. Find the word moo.", correct: "moo", choices: ["moo", "man"] },
+                    { display: "The cat can ____", audio: "The cat can purr. Find the word purr.", correct: "purr", choices: ["purr", "pig"] },
+                    { display: "The owl can ____", audio: "The owl can hoot. Find the word hoot.", correct: "hoot", choices: ["hoot", "hat"] },
+                    { display: "The lion can ____", audio: "The lion can roar. Find the word roar.", correct: "roar", choices: ["roar", "run"] },
+                    { display: "The snake can ____", audio: "The snake can hiss. Find the word hiss.", correct: "hiss", choices: ["hiss", "hop"] },
+                    { display: "The mouse is ____", audio: "The mouse is tiny. Find the word tiny.", correct: "tiny", choices: ["tiny", "ten"] },
+                    { display: "The book is ____", audio: "The book is good. Find the word good.", correct: "good", choices: ["good", "green"] },
+                    { display: "The game is ____", audio: "The game is fun. Find the word fun.", correct: "fun", choices: ["fun", "fox"] },
+                    { display: "The desk is ____", audio: "The desk is wood. Find the word wood.", correct: "wood", choices: ["wood", "with"] },
+                    { display: "The window is ____", audio: "The window is glass. Find the word glass.", correct: "glass", choices: ["glass", "green"] },
+                    { display: "The pan is ____", audio: "The pan is metal. Find the word metal.", correct: "metal", choices: ["metal", "man"] },
+                    { display: "The wall is ____", audio: "The wall is brick. Find the word brick.", correct: "brick", choices: ["brick", "blue"] },
+                    { display: "The rock is ____", audio: "The rock is stone. Find the word stone.", correct: "stone", choices: ["stone", "star"] },
+                    { display: "The toy is ____", audio: "The toy is plastic. Find the word plastic.", correct: "plastic", choices: ["plastic", "play"] },
+                    { display: "The dress is ____", audio: "The dress is silk. Find the word silk.", correct: "silk", choices: ["silk", "sun"] },
+                    { display: "The socks are ____", audio: "The socks are wool. Find the word wool.", correct: "wool", choices: ["wool", "with"] },
+                    { display: "The boat can ____", audio: "The boat can sail. Find the word sail.", correct: "sail", choices: ["sail", "see"] },
+                    { display: "The kite can ____", audio: "The kite can soar. Find the word soar.", correct: "soar", choices: ["soar", "sad"] },
+                    { display: "The wind can ____", audio: "The wind can blow. Find the word blow.", correct: "blow", choices: ["blow", "big"] },
+                    { display: "The rain can ____", audio: "The rain can fall. Find the word fall.", correct: "fall", choices: ["fall", "fox"] },
+                    { display: "The snow is ____", audio: "The snow is cold. Find the word cold.", correct: "cold", choices: ["cold", "cat"] },
+                    { display: "The fire is ____", audio: "The fire is bright. Find the word bright.", correct: "bright", choices: ["bright", "bug"] },
+                    { display: "The light is ____", audio: "The light is on. Find the word on.", correct: "on", choices: ["on", "out"] },
+                    { display: "The lamp is ____", audio: "The lamp is off. Find the word off.", correct: "off", choices: ["off", "our"] },
+                    { display: "The path goes ____", audio: "The path goes up. Find the word up.", correct: "up", choices: ["up", "us"] },
+                    { display: "The slide goes ____", audio: "The slide goes down. Find the word down.", correct: "down", choices: ["down", "dog"] },
+                    { display: "Look to the ____", audio: "Look to the left. Find the word left.", correct: "left", choices: ["left", "look"] },
+                    { display: "Turn to the ____", audio: "Turn to the right. Find the word right.", correct: "right", choices: ["right", "red"] },
+                    { display: "Step to the ____", audio: "Step to the side. Find the word side.", correct: "side", choices: ["side", "sun"] },
+                    { display: "Walk straight ____", audio: "Walk straight ahead. Find the word ahead.", correct: "ahead", choices: ["ahead", "and"] },
+                    { display: "Go out the ____", audio: "Go out the door. Find the word door.", correct: "door", choices: ["door", "dog"] },
+                    { display: "Look out the ____", audio: "Look out the window. Find the word window.", correct: "window", choices: ["window", "water"] },
+                    { display: "Sit on the ____", audio: "Sit on the floor. Find the word floor.", correct: "floor", choices: ["floor", "fox"] },
+                    { display: "Sleep on the ____", audio: "Sleep on the bed. Find the word bed.", correct: "bed", choices: ["bed", "big"] }
+                ]
+            },
+            {
+                levelName: "Level 2",
+                questions: [
+                    { display: "____", audio: "Find the word: because.", correct: "because", choices: ["because", "before"] },
+                    { display: "____", audio: "Find the word: beautiful.", correct: "beautiful", choices: ["beautiful", "butter"] },
+                    { display: "____", audio: "Find the word: together.", correct: "together", choices: ["together", "today"] },
+                    { display: "____", audio: "Find the word: please.", correct: "please", choices: ["please", "play"] },
+                    { display: "____", audio: "Find the word: favorite.", correct: "favorite", choices: ["favorite", "family"] },
+                    { display: "____", audio: "Find the word: morning.", correct: "morning", choices: ["morning", "monkey"] },
+                    { display: "____", audio: "Find the word: standard.", correct: "standard", choices: ["standard", "standing"] },
+                    { display: "____", audio: "Find the word: special.", correct: "special", choices: ["special", "spring"] },
+                    { display: "____", audio: "Find the word: dynamic.", correct: "dynamic", choices: ["dynamic", "dancing"] },
+                    { display: "____", audio: "Find the word: building.", correct: "building", choices: ["building", "brother"] },
+                    { display: "____", audio: "Find the word: animal.", correct: "animal", choices: ["animal", "another"] },
+                    { display: "____", audio: "Find the word: weather.", correct: "weather", choices: ["weather", "welcome"] },
+                    { display: "____", audio: "Find the word: children.", correct: "children", choices: ["children", "chicken"] },
+                    { display: "____", audio: "Find the word: generic.", correct: "generic", choices: ["generic", "garden"] },
+                    { display: "____", audio: "Find the word: family.", correct: "family", choices: ["family", "father"] },
+                    { display: "____", audio: "Find the word: kitchen.", correct: "kitchen", choices: ["kitchen", "kitten"] },
+                    { display: "____", audio: "Find the word: picture.", correct: "picture", choices: ["picture", "practice"] },
+                    { display: "____", audio: "Find the word: blanket.", correct: "blanket", choices: ["blanket", "bicycle"] },
+                    { display: "____", audio: "Find the word: computer.", correct: "computer", choices: ["computer", "company"] },
+                    { display: "____", audio: "Find the word: dinosaur.", correct: "dinosaur", choices: ["dinosaur", "different"] },
+                    { display: "____", audio: "Find the word: afternoon.", correct: "afternoon", choices: ["afternoon", "airplane"] },
+                    { display: "____", audio: "Find the word: tomorrow.", correct: "tomorrow", choices: ["tomorrow", "together"] },
+                    { display: "____", audio: "Find the word: yesterday.", correct: "yesterday", choices: ["yesterday", "yellow"] },
+                    { display: "____", audio: "Find the word: butterfly.", correct: "butterfly", choices: ["butterfly", "button"] },
+                    { display: "____", audio: "Find the word: separate.", correct: "separate", choices: ["separate", "surprise"] },
+                    { display: "____", audio: "Find the word: carefully.", correct: "carefully", choices: ["carefully", "climbing"] },
+                    { display: "____", audio: "Find the word: absolute.", correct: "absolute", choices: ["absolute", "airplane"] },
+                    { display: "____", audio: "Find the word: quiet.", correct: "quiet", choices: ["quiet", "queen"] },
+                    { display: "____", audio: "Find the word: sudden.", correct: "sudden", choices: ["sudden", "summer"] },
+                    { display: "____", audio: "Find the word: important.", correct: "important", choices: ["important", "impossible"] },
+                    { display: "____", audio: "Find the word: question.", correct: "question", choices: ["question", "quarter"] },
+                    { display: "____", audio: "Find the word: straight.", correct: "straight", choices: ["straight", "strong"] },
+                    { display: "____", audio: "Find the word: brought.", correct: "brought", choices: ["brought", "bright"] },
+                    { display: "____", audio: "Find the word: thought.", correct: "thought", choices: ["thought", "through"] },
+                    { display: "____", audio: "Find the word: window.", correct: "window", choices: ["window", "winter"] },
+                    { display: "____", audio: "Find the word: library.", correct: "library", choices: ["library", "little"] },
+                    { display: "____", audio: "Find the word: sentence.", correct: "sentence", choices: ["sentence", "science"] },
+                    { display: "____", audio: "Find the word: language.", correct: "language", choices: ["language", "laughing"] },
+                    { display: "____", audio: "Find the word: alphabet.", correct: "alphabet", choices: ["alphabet", "always"] },
+                    { display: "____", audio: "Find the word: thousand.", correct: "thousand", choices: ["thousand", "through"] },
+                    { display: "____", audio: "Find the word: century.", correct: "century", choices: ["century", "country"] },
+                    { display: "____", audio: "Find the word: complete.", correct: "complete", choices: ["complete", "complex"] },
+                    { display: "____", audio: "Find the word: perfect.", correct: "perfect", choices: ["perfect", "person"] },
+                    { display: "____", audio: "Find the word: problem.", correct: "problem", choices: ["problem", "program"] },
+                    { display: "____", audio: "Find the word: structure.", correct: "structure", choices: ["structure", "student"] },
+                    { display: "____", audio: "Find the word: machine.", correct: "machine", choices: ["machine", "morning"] },
+                    { display: "____", audio: "Find the word: system.", correct: "system", choices: ["system", "summer"] },
+                    { display: "____", audio: "Find the word: surface.", correct: "surface", choices: ["surface", "surprise"] },
+                    { display: "____", audio: "Find the word: ocean.", correct: "ocean", choices: ["ocean", "orange"] },
+                    { display: "____", audio: "Find the word: island.", correct: "island", choices: ["island", "inside"] },
+                    { display: "____", audio: "Find the word: mountain.", correct: "mountain", choices: ["mountain", "morning"] },
+                    { display: "____", audio: "Find the word: valley.", correct: "valley", choices: ["valley", "village"] },
+                    { display: "____", audio: "Find the word: forest.", correct: "forest", choices: ["forest", "friend"] },
+                    { display: "____", audio: "Find the word: desert.", correct: "desert", choices: ["desert", "dinner"] },
+                    { display: "____", audio: "Find the word: climate.", correct: "climate", choices: ["climate", "climbing"] },
+                    { display: "____", audio: "Find the word: science.", correct: "science", choices: ["science", "school"] },
+                    { display: "____", audio: "Find the word: history.", correct: "history", choices: ["history", "happy"] },
+                    { display: "____", audio: "Find the word: journey.", correct: "journey", choices: ["journey", "jacket"] },
+                    { display: "____", audio: "Find the word: creature.", correct: "creature", choices: ["creature", "crystal"] },
+                    { display: "____", audio: "Find the word: standard.", correct: "standard", choices: ["standard", "station"] },
+                    { display: "____", audio: "Find the word: practice.", correct: "practice", choices: ["practice", "protect"] },
+                    { display: "____", audio: "Find the word: simple.", correct: "simple", choices: ["simple", "silver"] },
+                    { display: "____", audio: "Find the word: dynamic.", correct: "dynamic", choices: ["dynamic", "distance"] },
+                    { display: "____", audio: "Find the word: element.", correct: "element", choices: ["element", "elephant"] },
+                    { display: "____", audio: "Find the word: generic.", correct: "generic", choices: ["generic", "general"] },
+                    { display: "____", audio: "Find the word: massive.", correct: "massive", choices: ["massive", "master"] },
+                    { display: "____", audio: "Find the word: trigger.", correct: "trigger", choices: ["trigger", "travel"] },
+                    { display: "____", audio: "Find the word: tactile.", correct: "tactile", choices: ["tactile", "talking"] },
+                    { display: "____", audio: "Find the word: native.", correct: "native", choices: ["native", "nature"] },
+                    { display: "____", audio: "Find the word: digital.", correct: "digital", choices: ["digital", "dinner"] },
+                    { display: "____", audio: "Find the word: custom.", correct: "custom", choices: ["custom", "cushion"] },
+                    { display: "____", audio: "Find the word: absolute.", correct: "absolute", choices: ["absolute", "ability"] },
+                    { display: "____", audio: "Find the word: balance.", correct: "balance", choices: ["balance", "balloon"] },
+                    { display: "____", audio: "Find the word: focus.", correct: "focus", choices: ["focus", "forest"] },
+                    { display: "____", audio: "Find the word: visual.", correct: "visual", choices: ["visual", "village"] },
+                    { display: "____", audio: "Find the word: target.", correct: "target", choices: ["target", "teacher"] },
+                    { display: "____", audio: "Find the word: logic.", correct: "logic", choices: ["logic", "light"] },
+                    { display: "____", audio: "Find ... space.", correct: "space", choices: ["space", "spring"] },
+                    { display: "____", audio: "Find the word: clear.", correct: "clear", choices: ["clear", "clean"] },
+                    { display: "____", audio: "Find the word: strict.", correct: "strict", choices: ["strict", "street"] },
+                    { display: "____", audio: "Find the word: flow.", correct: "flow", choices: ["flow", "fly"] },
+                    { display: "____", audio: "Find the word: state.", correct: "state", choices: ["state", "star"] },
+                    { display: "____", audio: "Find the word: clean.", correct: "clean", choices: ["clean", "clock"] },
+                    { display: "____", audio: "Find the word: soft.", correct: "soft", choices: ["soft", "song"] },
+                    { display: "____", audio: "Find the word: voice.", correct: "voice", choices: ["voice", "visit"] },
+                    { display: "____", audio: "Find the word: speed.", correct: "speed", choices: ["speed", "space"] },
+                    { display: "____", audio: "Find the word: delay.", correct: "delay", choices: ["delay", "day"] },
+                    { display: "____", audio: "Find the word: step.", correct: "step", choices: ["step", "stop"] },
+                    { display: "____", audio: "Find the word: file.", correct: "file", choices: ["file", "find"] },
+                    { display: "____", audio: "Find the word: standard.", correct: "standard", choices: ["standard", "stamp"] },
+                    { display: "____", audio: "Find the word: text.", correct: "text", choices: ["text", "tent"] },
+                    { display: "____", audio: "Find the word: style.", correct: "style", choices: ["style", "stone"] },
+                    { display: "____", audio: "Find the word: complete.", correct: "complete", choices: ["complete", "compare"] },
+                    { display: "____", audio: "Find the word: core.", correct: "core", choices: ["core", "corn"] },
+                    { display: "____", audio: "Find the word: code.", correct: "code", choices: ["code", "cold"] },
+                    { display: "____", audio: "Find the word: task.", correct: "task", choices: ["task", "talk"] },
+                    { display: "____", audio: "Find the word: list.", correct: "list", choices: ["list", "lost"] },
+                    { display: "____", audio: "Find the word: sequence.", correct: "sequence", choices: ["sequence", "second"] },
+                    { display: "____", audio: "Find the word: pattern.", correct: "pattern", choices: ["pattern", "parent"] },
+                    { display: "____", audio: "Find the word: drawing.", correct: "drawing", choices: ["drawing", "driving"] }
+                ]
+            },
+            {
+                levelName: "Level 3",
+                questions: [
+                    { display: "My friend is ____", audio: "My friend is beautiful. Find the word beautiful.", correct: "beautiful", choices: ["beautiful", "black"] },
+                    { display: "I like it ____ it is fun", audio: "I like it because it is fun. Find the word because.", correct: "because", choices: ["because", "but"] },
+                    { display: "We can play ____", audio: "We can play together. Find the word together.", correct: "today", choices: ["today", "together"] },
+                    { display: "Can I ____ have some?", audio: "Can I please have some? Find the word please.", correct: "play", choices: ["play", "please"] },
+                    { display: "Apple pie is my ____", audio: "Apple pie is my favorite. Find the word favorite.", correct: "favorite", choices: ["favorite", "family"] },
+                    { display: "Wake up early in the ____", audio: "Wake up early in the morning. Find the word morning.", correct: "morning", choices: ["morning", "monkey"] },
+                    { display: "This is a ____ rule", audio: "This is a standard rule. Find the word standard.", correct: "standard", choices: ["standard", "standing"] },
+                    { display: "Today is a ____ day", audio: "Today is a special day. Find the word special.", correct: "special", choices: ["special", "spring"] },
+                    { display: "The dance is very ____", audio: "The dance is very dynamic. Find the word dynamic.", correct: "dynamic", choices: ["dynamic", "dancing"] },
+                    { display: "Look at that tall ____", audio: "Look at that tall building. Find the word building.", correct: "building", choices: ["building", "brother"] },
+                    { display: "The cat is an ____", audio: "The cat is an animal. Find the word animal.", correct: "animal", choices: ["animal", "another"] },
+                    { display: "I love sunny ____", audio: "I love sunny weather. Find the word weather.", correct: "weather", choices: ["weather", "welcome"] },
+                    { display: "The ____ play outside", audio: "The children play outside. Find the word children.", correct: "children", choices: ["children", "chicken"] },
+                    { display: "This is a ____ brand", audio: "This is a generic brand. Find the word generic.", correct: "generic", choices: ["generic", "garden"] },
+                    { display: "I love my ____", audio: "I love my family. Find the word family.", correct: "family", choices: ["family", "father"] },
+                    { display: "Mom cooks in the ____", audio: "Mom cooks in the kitchen. Find the word kitchen.", correct: "kitchen", choices: ["kitchen", "kitten"] },
+                    { display: "Draw a pretty ____", audio: "Draw a pretty picture. Find the word picture.", correct: "picture", choices: ["picture", "practice"] },
+                    { display: "Put on your warm ____", audio: "Put on your warm blanket. Find the word blanket.", correct: "blanket", choices: ["blanket", "bicycle"] },
+                    { display: "Play a game on the ____", audio: "Play a game on the computer. Find the word computer.", correct: "computer", choices: ["computer", "company"] },
+                    { display: "The T-Rex is a ____", audio: "The T-Rex is a dinosaur. Find the word dinosaur.", correct: "dinosaur", choices: ["dinosaur", "different"] },
+                    { display: "We eat lunch in the ____", audio: "We eat lunch in the afternoon. Find the word afternoon.", correct: "afternoon", choices: ["afternoon", "airplane"] },
+                    { display: "I will see you ____", audio: "I will see you tomorrow. Find the word tomorrow.", correct: "tomorrow", choices: ["tomorrow", "together"] },
+                    { display: "We went swimming ____", audio: "We went swimming yesterday. Find the word yesterday.", correct: "yesterday", choices: ["yesterday", "yellow"] },
+                    { display: "See the colorful ____", audio: "See the colorful butterfly. Find the word butterfly.", correct: "butterfly", choices: ["butterfly", "button"] },
+                    { display: "Keep the items ____", audio: "Keep the items separate. Find the word separate.", correct: "separate", choices: ["separate", "surprise"] },
+                    { display: "Hold the glass ____", audio: "Hold the glass carefully. Find the word carefully.", correct: "carefully", choices: ["carefully", "climbing"] },
+                    { display: "You have my ____ trust", audio: "You have my absolute trust. Find the word absolute.", correct: "absolute", choices: ["absolute", "airplane"] },
+                    { display: "Please keep very ____", audio: "Please keep very quiet. Find the word quiet.", correct: "quiet", choices: ["quiet", "queen"] },
+                    { display: "There was a ____ turn", audio: "There was a sudden turn. Find the word sudden.", correct: "sudden", choices: ["sudden", "summer"] },
+                    { display: "This is an ____ task", audio: "This is an important task. Find the word important.", correct: "important", choices: ["important", "impossible"] },
+                    { display: "Ask a good ____", audio: "Ask a good question. Find the word question.", correct: "question", choices: ["question", "quarter"] },
+                    { display: "Walk in a ____ line", audio: "Walk in a straight line. Find the word straight.", correct: "straight", choices: ["straight", "strong"] },
+                    { display: "He ____ his new toy", audio: "He brought his new toy. Find the word brought.", correct: "brought", choices: ["brought", "bright"] },
+                    { display: "I ____ about you today", audio: "I thought about you today. Find the word thought.", correct: "thought", choices: ["thought", "through"] },
+                    { display: "Look out the clean ____", audio: "Look out the clean window. Find the word window.", correct: "window", choices: ["window", "winter"] },
+                    { display: "Get a book from the ____", audio: "Get a book from the library. Find the word library.", correct: "library", choices: ["library", "little"] },
+                    { display: "Read this simple ____", audio: "Read this simple sentence. Find the word sentence.", correct: "sentence", choices: ["sentence", "science"] },
+                    { display: "We speak a nice ____", audio: "We speak a nice language. Find the word language.", correct: "language", choices: ["language", "laughing"] },
+                    { display: "Sing the ABC ____", audio: "Sing the ABC alphabet. Find the word alphabet.", correct: "alphabet", choices: ["alphabet", "always"] },
+                    { display: "Count to one ____", audio: "Count to one thousand. Find the word thousand.", correct: "thousand", choices: ["thousand", "through"] },
+                    { display: "One hundred years is a ____", audio: "One hundred years is a century. Find the word century.", correct: "century", choices: ["century", "country"] },
+                    { display: "Finish your ____ work", audio: "Finish your complete work. Find the word complete.", correct: "complete", choices: ["complete", "complex"] },
+                    { display: "Your drawing is ____", audio: "Your drawing is perfect. Find the word perfect.", correct: "perfect", choices: ["perfect", "person"] },
+                    { display: "Solve this math ____", audio: "Solve this math problem. Find the word problem.", correct: "problem", choices: ["problem", "program"] },
+                    { display: "Look at the brick ____", audio: "Look at the brick structure. Find the word structure.", correct: "structure", choices: ["structure", "student"] },
+                    { display: "Washing laundry is a ____", audio: "Washing laundry is a machine. Find the word machine.", correct: "machine", choices: ["machine", "morning"] },
+                    { display: "The computer has a ____", audio: "The computer has a system. Find the word system.", correct: "system", choices: ["system", "summer"] },
+                    { display: "Wipe the flat ____", audio: "Wipe the flat surface. Find the word surface.", correct: "surface", choices: ["surface", "surprise"] },
+                    { display: "Whales live in the ____", audio: "Whales live in the ocean. Find the word ocean.", correct: "ocean", choices: ["ocean", "orange"] },
+                    { display: "We visited a tropical ____", audio: "We visited a tropical island. Find the word island.", correct: "island", choices: ["island", "inside"] },
+                    { display: "Climb up the high ____", audio: "Climb up the high mountain. Find the word mountain.", correct: "mountain", choices: ["mountain", "morning"] },
+                    { display: "The river runs down the ____", audio: "The river runs down the valley. Find the word valley.", correct: "valley", choices: ["valley", "village"] },
+                    { display: "Many trees grow in the ____", audio: "Many trees grow in the forest. Find the word forest.", correct: "forest", choices: ["forest", "friend"] },
+                    { display: "It is dry in the ____", audio: "It is dry in the desert. Find the word desert.", correct: "desert", choices: ["desert", "dinner"] },
+                    { display: "Earth has a changing ____", audio: "Earth has a changing climate. Find the word climate.", correct: "climate", choices: ["climate", "climbing"] },
+                    { display: "We learn physics in ____", audio: "We learn physics in science. Find the word science.", correct: "science", choices: ["science", "school"] },
+                    { display: "We learn about kings in ____", audio: "We learn about kings in history. Find the word history.", correct: "history", choices: ["history", "happy"] },
+                    { display: "We went on a long ____", audio: "We went on a long journey. Find the word journey.", correct: "journey", choices: ["journey", "jacket"] },
+                    { display: "The forest has a unique ____", audio: "The forest has a unique creature. Find the word creature.", correct: "creature", choices: ["creature", "crystal"] },
+                    { display: "Follow the ____ routine", audio: "Follow the standard routine. Find the word standard.", correct: "standard", choices: ["standard", "station"] },
+                    { display: "Soccer requires daily ____", audio: "Soccer requires daily practice. Find the word practice.", correct: "practice", choices: ["practice", "protect"] },
+                    { display: "This puzzle is quite ____", audio: "This puzzle is quite simple. Find the word simple.", correct: "simple", choices: ["simple", "silver"] },
+                    { display: "The story is dynamic ____", audio: "The story is dynamic. Find the word dynamic.", correct: "dynamic", choices: ["dynamic", "distance"] },
+                    { display: "Water is a core ____", audio: "Water is a core element. Find the word element.", correct: "element", choices: ["element", "elephant"] },
+                    { display: "This is a ____ answer", audio: "This is a generic answer. Find the word generic.", correct: "generic", choices: ["generic", "general"] },
+                    { display: "The ship was truly ____", audio: "The ship was truly massive. Find the word massive.", correct: "massive", choices: ["massive", "master"] },
+                    { display: "A loud noise can ____ it", audio: "A loud noise can trigger it. Find the word trigger.", correct: "trigger", choices: ["trigger", "travel"] },
+                    { display: "The keyboard is very ____", audio: "The keyboard is very tactile. Find the word tactile.", correct: "tactile", choices: ["tactile", "talking"] },
+                    { display: "Speak in your ____ tongue", audio: "Speak in your native tongue. Find the word native.", correct: "native", choices: ["native", "nature"] },
+                    { display: "The iPad is a ____ device", audio: "The iPad is a digital device. Find the word digital.", correct: "digital", choices: ["digital", "dinner"] },
+                    { display: "He built a ____ bike", audio: "He built a custom bike. Find the word custom.", correct: "custom", choices: ["custom", "cushion"] },
+                    { display: "That is the ____ truth", audio: "That is the absolute truth. Find the word absolute.", correct: "absolute", choices: ["absolute", "ability"] },
+                    { display: "Walk on the beam to ____", audio: "Walk on the beam to balance. Find the word balance.", correct: "balance", choices: ["balance", "balloon"] },
+                    { display: "You must keep your ____", audio: "You must keep your focus. Find the word focus.", correct: "focus", choices: ["focus", "forest"] },
+                    { display: "Use a clear ____ aid", audio: "Use a clear visual aid. Find the word visual.", correct: "visual", choices: ["visual", "village"] },
+                    { display: "Hit the center of the ____", audio: "Hit the center of the target. Find the word target.", correct: "target", choices: ["target", "teacher"] },
+                    { display: "Use your mind and ____", audio: "Use your mind and logic. Find the word logic.", correct: "logic", choices: ["logic", "light"] },
+                    { display: "Rockets fly up into ____", audio: "Rockets fly up into space. Find the word space.", correct: "space", choices: ["space", "spring"] },
+                    { display: "The stream water is ____", audio: "The stream water is clear. Find the word clear.", correct: "clear", choices: ["clear", "clean"] },
+                    { display: "We must follow ____ rules", audio: "We must follow strict rules. Find the word strict.", correct: "strict", choices: ["strict", "street"] },
+                    { display: "Water tracks a steady ____", audio: "Water tracks a steady flow. Find the word flow.", correct: "flow", choices: ["flow", "fly"] },
+                    { display: "Liquid is a form of ____", audio: "Liquid is a form of state. Find the word state.", correct: "state", choices: ["state", "star"] },
+                    { display: "Make sure your room is ____", audio: "Make sure your room is clean. Find the word clean.", correct: "clean", choices: ["clean", "clock"] },
+                    { display: "The cat fur is very ____", audio: "The cat fur is very soft. Find the word soft.", correct: "soft", choices: ["soft", "song"] },
+                    { display: "I can hear your loud ____", audio: "I can hear your loud voice. Find the word voice.", correct: "voice", choices: ["voice", "visit"] },
+                    { display: "The runner has high ____", audio: "The runner has high speed. Find the word speed.", correct: "speed", choices: ["speed", "space"] },
+                    { display: "Wait without any ____", audio: "Wait without any delay. Find the word delay.", correct: "delay", choices: ["delay", "day"] },
+                    { display: "Take a careful ____ forward", audio: "Take a careful step forward. Find the word step.", correct: "step", choices: ["step", "stop"] },
+                    { display: "Save your game to a ____", audio: "Save your game to a file. Find the word file.", correct: "file", choices: ["file", "find"] },
+                    { display: "Use a basic ____ setup", audio: "Use a basic standard setup. Find the word standard.", correct: "standard", choices: ["standard", "stamp"] },
+                    { display: "Read the written ____ message", audio: "Read the written text message. Find the word text.", correct: "text", choices: ["text", "tent"] },
+                    { display: "She has a cool clothing ____", audio: "She has a cool clothing style. Find the word style.", correct: "style", choices: ["style", "stone"] },
+                    { display: "Bring it to a ____ stop", audio: "Bring it to a complete stop. Find the word complete.", correct: "complete", choices: ["complete", "compare"] },
+                    { display: "Math is a ____ subject", audio: "Math is a core subject. Find the word core.", correct: "core", choices: ["core", "corn"] },
+                    { display: "We are writing computer ____", audio: "We are writing computer code. Find the word code.", correct: "code", choices: ["code", "cold"] },
+                    { display: "Finish your daily ____ now", audio: "Finish your daily task now. Find the word task.", correct: "task", choices: ["task", "talk"] },
+                    { display: "Make a shopping ____ together", audio: "Make a shopping list together. Find the word list.", correct: "list", choices: ["list", "lost"] },
+                    { display: "Follow the correct ____", audio: "Follow the correct sequence. Find the word sequence.", correct: "sequence", choices: ["sequence", "second"] },
+                    { display: "Look at the striped ____", audio: "Look at the striped pattern. Find the word pattern.", correct: "pattern", choices: ["pattern", "parent"] },
+                    { display: "Color in your new ____", audio: "Color in your new drawing. Find the word drawing.", correct: "drawing", choices: ["drawing", "driving"] }
+                ]
+            },
+            {
+                levelName: "Level 4",
+                questions: [
+                    { display: "We went ____ the dark tunnel", audio: "We went through the dark tunnel. Find the word through.", correct: "through", choices: ["through", "thought", "though"] },
+                    { display: "Please pass the ____", audio: "Please pass the butter. Find the word butter.", correct: "butter", choices: ["butter", "better", "bitter"] },
+                    { display: "He came ____ me in line", audio: "He came before me in line. Find the word before.", correct: "before", choices: ["before", "behind", "because"] },
+                    { display: "The sun is shining ____", audio: "The sun is shining bright. Find the word bright.", correct: "bright", choices: ["bright", "brought", "bought"] },
+                    { display: "I don't know ____ to go", audio: "I don't know where to go. Find the word where.", correct: "where", choices: ["where", "there", "here"] },
+                    { display: "The weather is ____ today", audio: "The weather is perfect today. Find the word perfect.", correct: "perfect", choices: ["perfect", "person", "purple"] },
+                    { display: "We should play ____", audio: "We should play together. Find the word together.", correct: "together", choices: ["together", "tomorrow", "tonight"] },
+                    { display: "Be careful not to ____", audio: "Be careful not to fall. Find the word fall.", correct: "fall", choices: ["fall", "fail", "full"] },
+                    { display: "The water is very ____", audio: "The water is deep. Find the word deep.", correct: "deep", choices: ["deep", "dear", "deer"] },
+                    { display: "That is a ____ story", audio: "That is a beautiful story. Find the word beautiful.", correct: "beautiful", choices: ["beautiful", "bright", "brother"] },
+                    { display: "Listen to my ____", audio: "Listen to my voice. Find the word voice.", correct: "voice", choices: ["voice", "visit", "view"] },
+                    { display: "I ____ to go to the store yesterday", audio: "I had to go to the store yesterday. Find the word had.", correct: "had", choices: ["had", "has", "have"] },
+                    { display: "They ____ going to the park", audio: "They are going to the park. Find the word are.", correct: "are", choices: ["are", "our", "air"] },
+                    { display: "The clock is on the ____", audio: "The clock is on the wall. Find the word wall.", correct: "wall", choices: ["wall", "walk", "well"] },
+                    { display: "She is my ____ sister", audio: "She is my favorite sister. Find the word favorite.", correct: "favorite", choices: ["favorite", "family", "forever"] },
+                    { display: "That is ____ fluffy cat", audio: "That is their fluffy cat. Find the word their.", correct: "their", choices: ["their", "there", "they're"] },
+                    { display: "What did you ____ today?", audio: "What did you wear today? Find the word wear.", correct: "wear", choices: ["where", "were", "wear"] },
+                    { display: "____ toy do you want?", audio: "Which toy do you want? Find the word which.", correct: "which", choices: ["which", "witch", "wish"] },
+                    { display: "Wait a ____ longer", audio: "Wait a while longer. Find the word while.", correct: "while", choices: ["white", "while", "whole"] },
+                    { display: "We can ____ the tall tree", audio: "We can climb the tall tree. Find the word climb.", correct: "climb", choices: ["clean", "clear", "climb"] },
+                    { display: "See her happy ____", audio: "See her happy smile. Find the word smile.", correct: "smile", choices: ["small", "smell", "smile"] },
+                    { display: "The leaf was ____ away", audio: "The leaf was blown away. Find the word blown.", correct: "blown", choices: ["brown", "blown", "brave"] },
+                    { display: "Tie your running ____", audio: "Tie your running shoes. Find the word shoes.", correct: "shoes", choices: ["shirt", "short", "shoes"] },
+                    { display: "Water the green ____", audio: "Water the green plant. Find the word plant.", correct: "plant", choices: ["place", "plane", "plant"] },
+                    { display: "Don't step on the ____", audio: "Don't step on the grass. Find the word grass.", correct: "grass", choices: ["grass", "glass", "green"] },
+                    { display: "I want ____ blocks right here", audio: "I want these blocks right here. Find the word these.", correct: "these", choices: ["three", "there", "these"] },
+                    { display: "Can you ____ a picture?", audio: "Can you draw a picture? Find the word draw.", correct: "draw", choices: ["drink", "drive", "draw"] },
+                    { display: "The pencil is ____", audio: "The pencil is sharp. Find the word sharp.", correct: "sharp", choices: ["sleep", "sheep", "sharp"] },
+                    { display: "Turn ____ at the corner", audio: "Turn right at the corner. Find the word right.", correct: "right", choices: ["light", "night", "right"] },
+                    { display: "The cowboy rode a ____", audio: "The cowboy rode a horse. Find the word horse.", correct: "horse", choices: ["house", "horse", "mouse"] },
+                    { display: "Please ____ the door", audio: "Please close the door. Find the word close.", correct: "close", choices: ["clock", "close", "cloth"] },
+                    { display: "Fill in the ____ space", audio: "Fill in the blank space. Find the word blank.", correct: "blank", choices: ["black", "block", "blank"] },
+                    { display: "A bee can ____ you", audio: "A bee can sting you. Find the word sting.", correct: "sting", choices: ["stick", "stone", "sting"] },
+                    { display: "The red ____ carries dirt", audio: "The red truck carries dirt. Find the word truck.", correct: "truck", choices: ["train", "truck", "trade"] },
+                    { display: "Be ____ in the dark", audio: "Be brave in the dark. Find the word brave.", correct: "brave", choices: ["bread", "break", "brave"] },
+                    { display: "Sit on the wooden ____", audio: "Sit on the wooden chair. Find the word chair.", correct: "chair", choices: ["chair", "cheer", "chain"] },
+                    { display: "Use the broom to ____", audio: "Use the broom to sweep. Find the word sweep.", correct: "sweep", choices: ["sweet", "sweat", "sweep"] },
+                    { display: "The little ____ ate cheese", audio: "The little mouse ate cheese. Find the word mouse.", correct: "mouse", choices: ["mouth", "month", "mouse"] },
+                    { display: "Bake a cake with ____", audio: "Bake a cake with flour. Find the word flour.", correct: "flour", choices: ["floor", "flour", "flood"] },
+                    { display: "The seed grows in the ____", audio: "The seed grows in the ground. Find the word ground.", correct: "ground", choices: ["grand", "green", "ground"] },
+                    { display: "You are very ____", audio: "You are very smart. Find the word smart.", correct: "smart", choices: ["start", "stare", "smart"] },
+                    { display: "What is that ____?", audio: "What is that thing? Find the word thing.", correct: "thing", choices: ["thank", "think", "thing"] },
+                    { display: "The bird flies ____ us", audio: "The bird flies above us. Find the word above.", correct: "above", choices: ["about", "above", "alone"] },
+                    { display: "Wait ____ the timer stops", audio: "Wait until the timer stops. Find the word until.", correct: "until", choices: ["under", "until", "uncle"] },
+                    { display: "Drink a cup of ____", audio: "Drink a cup of water. Find the word water.", correct: "water", choices: ["water", "watch", "white"] },
+                    { display: "I ____ my lost toy", audio: "I found my lost toy. Find the word found.", correct: "found", choices: ["found", "sound", "round"] },
+                    { display: "You ____ wash your hands", audio: "You should wash your hands. Find the word should.", correct: "should", choices: ["could", "would", "should"] },
+                    { display: "Sit in the ____ seat", audio: "Sit in the front seat. Find the word front.", correct: "front", choices: ["first", "front", "fruit"] },
+                    { display: "The shoes are too ____", audio: "The shoes are too tight. Find the word tight.", correct: "tight", choices: ["tight", "night", "light"] },
+                    { display: "Campfires make grey ____", audio: "Campfires make grey smoke. Find the word smoke.", correct: "smoke", choices: ["small", "smart", "smoke"] },
+                    { display: "You won the first ____", audio: "You won the first prize. Find the word prize.", correct: "prize", choices: ["print", "proud", "prize"] },
+                    { display: "Eat a ____ of pizza", audio: "Eat a slice of pizza. Find the word slice.", correct: "slice", choices: ["slide", "slice", "slime"] },
+                    { display: "I had a funny ____ last night", audio: "I had a funny dream last night. Find the word dream.", correct: "dream", choices: ["cream", "dream", "scream"] },
+                    { display: "The winter wind is a ____", audio: "The winter wind is a chill. Find the word chill.", correct: "chill", choices: ["child", "chief", "chill"] },
+                    { display: "Eat soup with a ____", audio: "Eat soup with a spoon. Find the word spoon.", correct: "spoon", choices: ["spoon", "spark", "space"] },
+                    { display: "The elephant has a long ____", audio: "The elephant has a long trunk. Find the word trunk.", correct: "trunk", choices: ["truck", "trunk", "track"] },
+                    { display: "Please ____ your toys", audio: "Please share your toys. Find the word share.", correct: "share", choices: ["stair", "stare", "share"] },
+                    { display: "Look at the fluffy white ____", audio: "Look at the fluffy white cloud. Find the word cloud.", correct: "cloud", choices: ["count", "cloud", "clown"] },
+                    { display: "A ____ of lightning split the sky", audio: "A flash of lightning split the sky. Find the word flash.", correct: "flash", choices: ["brush", "crash", "flash"] },
+                    { display: "Wear a clean ____ today", audio: "Wear a clean shirt today. Find the word shirt.", correct: "shirt", choices: ["shout", "shirt", "short"] },
+                    { display: "She wore a pink ____", audio: "She wore a pink skirt. Find the word skirt.", correct: "skirt", choices: ["skate", "skirt", "scare"] },
+                    { display: "I love eating a purple ____", audio: "I love eating a purple grape. Find the word grape.", correct: "grape", choices: ["grape", "grade", "grass"] },
+                    { display: "Sit on the park ____", audio: "Sit on the park bench. Find the word bench.", correct: "bench", choices: ["beach", "bench", "peach"] },
+                    { display: "I ____ you are right", audio: "I think you are right. Find the word think.", correct: "think", choices: ["thick", "think", "thing"] },
+                    { display: "The car has a flat ____", audio: "The car has a flat wheel. Find the word wheel.", correct: "wheel", choices: ["whale", "wheel", "white"] },
+                    { display: "Let's eat a healthy ____", audio: "Let's eat a healthy snack. Find the word snack.", correct: "snack", choices: ["snack", "snake", "shake"] },
+                    { display: "Mars is a red ____", audio: "Mars is a red planet. Find the word planet.", correct: "planet", choices: ["plant", "planet", "plastic"] },
+                    { display: "The funny joke made her ____", audio: "The funny joke made her smile. Find the word smile.", correct: "smile", choices: ["smoke", "smile", "smart"] },
+                    { display: "The water is crisp and ____", audio: "The water is crisp and clear. Find the word clear.", correct: "clear", choices: ["cloud", "clear", "clean"] },
+                    { display: "An apple is a healthy ____", audio: "An apple is a healthy fruit. Find the word fruit.", correct: "fruit", choices: ["fruit", "front", "frost"] },
+                    { display: "Be fast and ____", audio: "Be fast and quick. Find the word quick.", correct: "quick", choices: ["quiet", "quite", "quick"] },
+                    { display: "Read me a bedtime ____", audio: "Read me a bedtime story. Find the word story.", correct: "story", choices: ["stone", "story", "store"] },
+                    { display: "The weight lifter is very ____", audio: "The weight lifter is very strong. Find the word strong.", correct: "strong", choices: ["spring", "string", "strong"] },
+                    { display: "We go to school to ____", audio: "We go to school to learn. Find the word learn.", correct: "learn", choices: ["leave", "learn", "least"] },
+                    { display: "Wake up ____ in the morning", audio: "Wake up early in the morning. Find the word early.", correct: "early", choices: ["early", "earth", "every"] },
+                    { display: "The tricky fox was very ____", audio: "The tricky fox was very clever. Find the word clever.", correct: "clever", choices: ["never", "seven", "clever"] },
+                    { display: "Are you ____ to go?", audio: "Are you ready to go? Find the word ready.", correct: "ready", choices: ["heavy", "ready", "head"] },
+                    { display: "Eat a tasty ____", audio: "Eat a tasty lunch. Find the word lunch.", correct: "lunch", choices: ["laugh", "launch", "lunch"] },
+                    { display: "Spell the hidden ____", audio: "Spell the hidden word. Find the word word.", correct: "word", choices: ["world", "word", "work"] },
+                    { display: "Spell your name with a ____", audio: "Spell your name with a letter. Find the word letter.", correct: "letter", choices: ["letter", "little", "later"] },
+                    { display: "Is this toy ____?", audio: "Is this toy yours? Find the word yours.", correct: "yours", choices: ["young", "yellow", "yours"] },
+                    { display: "Look at your ____ to tell time", audio: "Look at your watch to tell time. Find the word watch.", correct: "watch", choices: ["watch", "water", "match"] },
+                    { display: "Do not ____ all your coins", audio: "Do not spend all your coins. Find the word spend.", correct: "spend", choices: ["spent", "spend", "speed"] },
+                    { display: "We can ____ a blanket fort", audio: "We can build a blanket fort. Find the word build.", correct: "build", choices: ["build", "built", "blind"] },
+                    { display: "Eat a ____ of cake", audio: "Eat a piece of cake. Find the word piece.", correct: "piece", choices: ["piece", "peace", "place"] },
+                    { display: "Use your ____ to think", audio: "Use your brain to think. Find the word brain.", correct: "brain", choices: ["brave", "brain", "brown"] },
+                    { display: "The airplane took ____", audio: "The airplane took flight. Find the word flight.", correct: "flight", choices: ["bright", "fright", "flight"] },
+                    { display: "Look both ways to ____ the street", audio: "Look both ways to cross the street. Find the word cross.", correct: "cross", choices: ["close", "cross", "class"] },
+                    { display: "I want to ____ juice", audio: "I want to drink juice. Find the word drink.", correct: "drink", choices: ["drank", "drunk", "drink"] },
+                    { display: "Please ____ me the book", audio: "Please bring me the book. Find the word bring.", correct: "bring", choices: ["bring", "blink", "blind"] },
+                    { display: "The king wears a golden ____", audio: "The king wears a golden crown. Find the word crown.", correct: "crown", choices: ["crawl", "crowd", "crown"] },
+                    { display: "Sweep the dirty ____", audio: "Sweep the dirty floor. Find the word floor.", correct: "floor", choices: ["float", "flood", "floor"] },
+                    { display: "Plants need water to ____", audio: "Plants need water to grow. Find the word grow.", correct: "grow", choices: ["grew", "grow", "green"] },
+                    { display: "I ____ the answer", audio: "I know the answer. Find the word know.", correct: "know", choices: ["known", "know", "knee"] },
+                    { display: "The radio made a loud ____", audio: "The radio made a loud noise. Find the word noise.", correct: "noise", choices: ["noise", "voice", "nose"] },
+                    { display: "Use a brush to ____ a picture", audio: "Use a brush to paint a picture. Find the word paint.", correct: "paint", choices: ["point", "paint", "print"] },
+                    { display: "Stretch high to ____ the shelf", audio: "Stretch high to reach the shelf. Find the word reach.", correct: "reach", choices: ["reach", "rich", "ready"] },
+                    { display: "Wear a warm winter ____", audio: "Wear a warm winter scarf. Find the word scarf.", correct: "scarf", choices: ["scale", "scare", "scarf"] },
+                    { display: "A circle is a round ____", audio: "A circle is a round shape. Find the word shape.", correct: "shape", choices: ["shake", "shape", "shark"] },
+                    { display: "He looks just like his ____ brother", audio: "He looks just like his twin brother. Find the word twin.", correct: "twin", choices: ["twice", "twist", "twin"] }
+                ]
+            },
+            {
+                levelName: "Level 5",
+                questions: [
+                    // --- Digraphs (sh, ch, th, wh, ck) ---
+                    { display: "The big ____ sails out to sea.", audio: "The big ship sails out to sea. Find the word ship.", correct: "ship", choices: ["ship", "shop", "chip", "slip"] },
+                    { display: "He likes to eat potato ____.", audio: "He likes to eat potato chips. Find the word chips.", correct: "chips", choices: ["chips", "chops", "ships", "clips"] },
+                    { display: "Look at the small green ____.", audio: "Look at the small green chick. Find the word chick.", correct: "chick", choices: ["chick", "check", "thick", "click"] },
+                    { display: "A rose has a sharp ____.", audio: "A rose has a sharp thorn. Find the word thorn.", correct: "thorn", choices: ["thorn", "horn", "born", "shorn"] },
+                    { display: "The white ____ spin on the car.", audio: "The white wheels spin on the car. Find the word wheels.", correct: "wheels", choices: ["wheels", "whales", "feels", "sheets"] },
+                    { display: "Put the coins inside the ____.", audio: "Put the coins inside the chest. Find the word chest.", correct: "chest", choices: ["chest", "chess", "chase", "best"] },
+                    { display: "I can ____ the heavy ball.", audio: "I can throw the heavy ball. Find the word throw.", correct: "throw", choices: ["throw", "three", "grew", "blow"] },
+                    { display: "We walk along the sandy ____.", audio: "We walk along the sandy beach. Find the word beach.", correct: "beach", choices: ["beach", "bench", "peach", "teach"] },
+                    { display: "Listen to the ticking ____.", audio: "Listen to the ticking clock. Find the word clock.", correct: "clock", choices: ["clock", "cloak", "block", "click"] },
+                    { display: "The duck has a shiny black ____.", audio: "The duck has a shiny black back. Find the word back.", correct: "back", choices: ["back", "bark", "pack", "black"] },
+
+                    // --- Consonant Blends (st, fl, gr, bl, cl, cr, dr, fr, tr) ---
+                    { display: "A bright ____ shines in the sky.", audio: "A bright star shines in the sky. Find the word star.", correct: "star", choices: ["star", "stair", "scar", "stay"] },
+                    { display: "The pink ____ grows in the mud.", audio: "The pink flower grows in the mud. Find the word flower.", correct: "flower", choices: ["flower", "flyer", "floor", "follower"] },
+                    { display: "The yard has soft green ____.", audio: "The yard has soft green grass. Find the word grass.", correct: "grass", choices: ["grass", "glass", "grape", "grace"] },
+                    { display: "The cold wind started to ____.", audio: "The cold wind started to blow. Find the word blow.", correct: "blow", choices: ["blow", "blue", "glow", "flow"] },
+                    { display: "The funny ____ performed a trick.", audio: "The funny clown performed a trick. Find the word clown.", correct: "clown", choices: ["clown", "cloud", "crown", "clean"] },
+                    { display: "The little ____ crawled up the wall.", audio: "The little crab crawled up the wall. Find the word crab.", correct: "crab", choices: ["crab", "crib", "crop", "grab"] },
+                    { display: "I had a scary ____ last night.", audio: "I had a scary dream last night. Find the word dream.", correct: "dream", choices: ["dream", "drum", "cream", "drag"] },
+                    { display: "The green ____ hopped into the pond.", audio: "The green frog hopped into the pond. Find the word frog.", correct: "frog", choices: ["frog", "from", "fog", "free"] },
+                    { display: "The heavy ____ hauls the dirt.", audio: "The heavy truck hauls the dirt. Find the word truck.", correct: "truck", choices: ["truck", "trunk", "track", "trick"] },
+                    { display: "He used a ____ to sweep the floor.", audio: "He used a brush to sweep the floor. Find the word brush.", correct: "brush", choices: ["brush", "crush", "rush", "bush"] },
+
+                    // --- Long Vowels & Silent E (CVCe) ---
+                    { display: "Let's bake a sweet chocolate ____.", audio: "Let's bake a sweet chocolate cake. Find the word cake.", correct: "cake", choices: ["cake", "coke", "bake", "lake"] },
+                    { display: "He rode his brand new ____.", audio: "He rode his brand new bike. Find the word bike.", correct: "bike", choices: ["bike", "bake", "hike", "like"] },
+                    { display: "The red brick ____ is cozy.", audio: "The red brick home is cozy. Find the word home.", correct: "home", choices: ["home", "hope", "hole", "come"] },
+                    { display: "Squeeze the toothpaste from the ____.", audio: "Squeeze the toothpaste from the tube. Find the word tube.", correct: "tube", choices: ["tube", "tub", "cube", "tune"] },
+                    { display: "The sweet pink ____ smells nice.", audio: "The sweet pink rose smells nice. Find the word rose.", correct: "rose", choices: ["rose", "rope", "nose", "ride"] },
+                    { display: "We flew a giant colorful ____.", audio: "We flew a giant colorful kite. Find the word kite.", correct: "kite", choices: ["kite", "bite", "white", "king"] },
+                    { display: "The camping fire was near the ____.", audio: "The camping fire was near the lake. Find the word lake.", correct: "lake", choices: ["lake", "like", "late", "lock"] },
+                    { display: "A tiny ____ ran across the kitchen floor.", audio: "A tiny mouse ran across the kitchen floor. Find the word mouse.", correct: "mouse", choices: ["mouse", "house", "moose", "mouth"] },
+                    { display: "The friendly dog wagged its ____.", audio: "The friendly dog wagged its tail. Find the word tail.", correct: "tail", choices: ["tail", "tall", "trail", "tale"] },
+                    { display: "We watched the heavy gate ____.", audio: "We watched the heavy gate close. Find the word close.", correct: "close", choices: ["close", "class", "clock", "chose"] },
+
+                    // --- Vowel Teams (ai, ay, ee, ea, oa, oo, ou, ow) ---
+                    { display: "The dark clouds brought cold ____.", audio: "The dark clouds brought cold rain. Find the word rain.", correct: "rain", choices: ["rain", "ran", "train", "brain"] },
+                    { display: "It is a wonderful, warm ____.", audio: "It is a wonderful, warm day. Find the word day.", correct: "day", choices: ["day", "play", "say", "dog"] },
+                    { display: "Look at the buzzing honey ____.", audio: "Look at the buzzing honey bee. Find the word bee.", correct: "bee", choices: ["bee", "see", "bed", "feet"] },
+                    { display: "I love to read a good ____.", audio: "I love to read a good book. Find the word book.", correct: "book", choices: ["book", "boot", "look", "bake"] },
+                    { display: "The wooden ____ floated down the river.", audio: "The wooden boat floated down the river. Find the word boat.", correct: "boat", choices: ["boat", "coat", "goat", "boot"] },
+                    { display: "The green ____ falls off the tree.", audio: "The green leaf falls off the tree. Find the word leaf.", correct: "leaf", choices: ["leaf", "lean", "loaf", "left"] },
+                    { display: "We saw a fluffy white ____ in the sky.", audio: "We saw a fluffy white cloud in the sky. Find the word cloud.", correct: "cloud", choices: ["cloud", "clown", "cold", "proud"] },
+                    { display: "The dark ____ hooted all night.", audio: "The dark owl hooted all night. Find the word owl.", correct: "owl", choices: ["owl", "own", "bowl", "howl"] },
+                    { display: "My left ____ hurts from running.", audio: "My left foot hurts from running. Find the word foot.", correct: "foot", choices: ["foot", "food", "feet", "boot"] },
+                    { display: "Pour a glass of warm ____.", audio: "Pour a glass of warm milk. Find the word milk.", correct: "milk", choices: ["milk", "silk", "mill", "melt"] },
+
+                    // --- R-Controlled Vowels & Advanced Ending Blends (ar, er, ir, or, ur, mp, nt, nd) ---
+                    { display: "We went to play at the city ____.", audio: "We went to play at the city park. Find the word park.", correct: "park", choices: ["park", "pack", "bark", "dark"] },
+                    { display: "A beautiful ____ sang on the branch.", audio: "A beautiful bird sang on the branch. Find the word bird.", correct: "bird", choices: ["bird", "bed", "bard", "third"] },
+                    { display: "The fast horse lives on the ____.", audio: "The fast horse lives on the farm. Find the word farm.", correct: "farm", choices: ["farm", "form", "firm", "arm"] },
+                    { display: "The tiny furry ____ ate the cheese.", audio: "The tiny furry mouse is cute. Find the word mouse.", correct: "mouse", choices: ["mouse", "house", "horse", "moose"] },
+                    { display: "Light the tall wax ____.", audio: "Light the tall wax candle. Find the word candle.", correct: "candle", choices: ["candle", "handle", "cradle", "candy"] },
+                    { display: "The big grey ____ has a long trunk.", audio: "The big grey elephant has a long trunk. Find the word elephant.", correct: "elephant", choices: ["elephant", "excellent", "elevator", "element"] },
+                    { display: "We set up a canvas ____ to camp inside.", audio: "We set up a canvas tent to camp inside. Find the word tent.", correct: "tent", choices: ["tent", "ten", "sent", "bent"] },
+                    { display: "He jumped off the high ____.", audio: "He jumped off the high ramp. Find the word ramp.", correct: "ramp", choices: ["ramp", "camp", "lamp", "stamp"] },
+                    { display: "Dig a deep hole in the brown ____.", audio: "Dig a deep hole in the brown sand. Find the word sand.", correct: "sand", choices: ["sand", "send", "hand", "band"] },
+                    { display: "The bright ____ illuminates the bedroom.", audio: "The bright lamp illuminates the bedroom. Find the word lamp.", correct: "lamp", choices: ["lamp", "camp", "ramp", "limp"] }
+                ]
+            },
+            {
+                levelName: "Level 6",
+                questions: [
+                    // --- 50-Question Phonics Spelling Integration Block ---
+                    { display: "The massive sailing ____ left the port.", audio: "Spell the word ship.", correct: "ship", choices: ["s", "h", "i", "p", "c", "f"] },
+                    { display: "The little orange ____ swam around.", audio: "Spell the word fish.", correct: "fish", choices: ["f", "i", "s", "h", "c", "t"] },
+                    { display: "A funny little ____ was chirping.", audio: "Spell the word chip.", correct: "chip", choices: ["c", "h", "i", "p", "s", "g"] },
+                    { display: "We went inside the toy ____.", audio: "Spell the word shop.", correct: "shop", choices: ["s", "h", "o", "p", "c", "b"] },
+                    { display: "Make a happy ____ upon a star.", audio: "Spell the word wish.", correct: "wish", choices: ["w", "i", "s", "h", "r", "p"] },
+                    { display: "Use an axe to ____ the wood.", audio: "Spell the word chop.", correct: "chop", choices: ["c", "h", "o", "p", "s", "d"] },
+                    { display: "Wipe the food off your ____.", audio: "Spell the word chin.", correct: "chin", choices: ["c", "h", "i", "n", "m", "t"] },
+                    { display: "The wire was very long and ____.", audio: "Spell the word thin.", correct: "thin", choices: ["t", "h", "i", "n", "f", "s"] },
+                    { display: "A fuzzy grey ____ flew near the lamp.", audio: "Spell the word moth.", correct: "moth", choices: ["m", "o", "t", "h", "n", "s"] },
+                    { display: "Splash inside the warm bubble ____.", audio: "Spell the word bath.", correct: "bath", choices: ["b", "a", "t", "h", "p", "r"] },
+                    { display: "Follow the stone walking ____.", audio: "Spell the word path.", correct: "path", choices: ["p", "a", "t", "h", "b", "s"] },
+                    { display: "The kind king was very ____.", audio: "Spell the word rich.", correct: "rich", choices: ["r", "i", "c", "h", "l", "t"] },
+                    { display: "Put the paper ____ in the wallet.", audio: "Spell the word cash.", correct: "cash", choices: ["c", "a", "s", "h", "r", "d"] },
+                    { display: "Do not run or ____ outside.", audio: "Spell the word rush.", correct: "rush", choices: ["r", "u", "s", "h", "w", "b"] },
+                    { display: "The driver cracked a leather ____.", audio: "Spell the word whip.", correct: "whip", choices: ["w", "h", "i", "p", "v", "l"] },
+                    { display: "The little yellow ____ says quack.", audio: "Spell the word duck.", correct: "duck", choices: ["d", "u", "c", "k", "q", "e"] },
+                    { display: "Turn the key to open the ____.", audio: "Spell the word lock.", correct: "lock", choices: ["l", "o", "c", "k", "r", "e"] },
+                    { display: "Put a warm ____ on your foot.", audio: "Spell the word sock.", correct: "sock", choices: ["s", "o", "c", "k", "r", "a"] },
+                    { display: "Throw a tiny ____ into the river.", audio: "Spell the word rock.", correct: "rock", choices: ["r", "o", "c", "k", "m", "i"] },
+                    { display: "Help me ____ the travel bag.", audio: "Spell the word pack.", correct: "pack", choices: ["p", "a", "c", "k", "b", "t"] },
+                    { display: "A bright yellow ____ is in the sky.", audio: "Spell the word star.", correct: "star", choices: ["s", "t", "a", "r", "c", "m"] },
+                    { display: "A little green ____ jumped far.", audio: "Spell the word frog.", correct: "frog", choices: ["f", "r", "o", "g", "t", "d"] },
+                    { display: "The ocean ____ crawled in the sand.", audio: "Spell the word crab.", correct: "crab", choices: ["c", "r", "a", "b", "g", "d"] },
+                    { display: "Beat the loud musical ____.", audio: "Spell the word drum.", correct: "drum", choices: ["d", "r", "u", "m", "b", "n"] },
+                    { display: "The apple grows high on the ____.", audio: "Spell the word tree.", correct: "tree", choices: ["t", "r", "e", "e", "a", "o"] },
+                    { display: "Wave the blue and red ____.", audio: "Spell the word flag.", correct: "flag", choices: ["f", "l", "a", "g", "p", "b"] },
+                    { display: "The table top is completely ____.", audio: "Spell the word flat.", correct: "flat", choices: ["f", "l", "a", "t", "p", "s"] },
+                    { display: "Fish can live and ____ under water.", audio: "Spell the word swim.", correct: "swim", choices: ["s", "w", "i", "m", "z", "n"] },
+                    { display: "Use a rope to ____ dynamically.", audio: "Spell the word skip.", correct: "skip", choices: ["s", "k", "i", "p", "c", "t"] },
+                    { display: "Red signs tell cars to ____.", audio: "Spell the word stop.", correct: "stop", choices: ["s", "t", "o", "p", "r", "d"] },
+                    { display: "We sleep inside a canvas ____.", audio: "Spell the word tent.", correct: "tent", choices: ["t", "e", "n", "t", "m", "d"] },
+                    { display: "Hold my ____ to cross the street.", audio: "Spell the word hand.", correct: "hand", choices: ["h", "a", "n", "d", "m", "b"] },
+                    { display: "Turn on the bedroom table ____.", audio: "Spell the word lamp.", correct: "lamp", choices: ["l", "a", "m", "p", "r", "b"] },
+                    { display: "Build a castle with dry ____.", audio: "Spell the word sand.", correct: "sand", choices: ["s", "a", "n", "d", "b", "t"] },
+                    { display: "The robin bird built a cozy ____.", audio: "Spell the word nest.", correct: "nest", choices: ["n", "e", "s", "t", "m", "p"] },
+                    { display: "Her favorite color is light ____.", audio: "Spell the word pink.", correct: "pink", choices: ["p", "i", "n", "k", "b", "g"] },
+                    { display: "Put your money inside a safe ____.", audio: "Spell the word bank.", correct: "bank", choices: ["b", "a", "n", "k", "r", "t"] },
+                    { display: "Sit down at your school ____.", audio: "Spell the word desk.", correct: "desk", choices: ["d", "e", "s", "k", "t", "p"] },
+                    { display: "See the high frog ____ up high.", audio: "Spell the word jump.", correct: "jump", choices: ["j", "u", "m", "p", "h", "b"] },
+                    { display: "We went to summer ____ to play.", audio: "Spell the word camp.", correct: "camp", choices: ["c", "a", "m", "p", "l", "t"] },
+                    { display: "The wild lions will ____ for food.", audio: "Spell the word hunt.", correct: "hunt", choices: ["h", "u", "n", "t", "m", "d"] },
+                    { display: "A cold winter ____ is blowing hard.", audio: "Spell the word wind.", correct: "wind", choices: ["w", "i", "n", "d", "r", "t"] },
+                    { display: "The race car goes very ____.", audio: "Spell the word fast.", correct: "fast", choices: ["f", "a", "s", "t", "l", "m"] },
+                    { display: "Put on a warm winter clothing ____.", audio: "Spell the word vest.", correct: "vest", choices: ["v", "e", "s", "t", "b", "p"] },
+                    { display: "Tighten your leather pants ____.", audio: "Spell the word belt.", correct: "belt", choices: ["b", "e", "l", "t", "d", "s"] },
+                    { display: "The ducks swim inside the ____.", audio: "Spell the word pond.", correct: "pond", choices: ["p", "o", "n", "d", "t", "b"] },
+                    { display: "Pour a cold glass of sweet ____.", audio: "Spell the word milk.", correct: "milk", choices: ["m", "i", "l", "k", "n", "s"] },
+                    { display: "Roll down the ice on a ____.", audio: "Spell the word skate.", correct: "skate", choices: ["s", "k", "a", "t", "e", "c", "r"] },
+                    { display: "Bake a sweet birthday chocolate ____.", audio: "Spell the word cake.", correct: "cake", choices: ["c", "a", "k", "e", "b", "s"] },
+                    { display: "The dog chewed on a white ____.", audio: "Spell the word bone.", correct: "bone", choices: ["b", "o", "n", "e", "t", "m"] }
+                ]
+            },
+            {
+                levelName: "Level 7",
+                // ALL 100 UN-TRUNCATED CHALLENGES FOR KEYBOARD ENTRY MODE
+                questions: [
+                    { display: "The cat is ____", audio: "The cat is black. Type the word black.", correct: "black" },
+                    { display: "The sun is ____", audio: "The sun is hot. Type the word hot.", correct: "hot" },
+                    { display: "I see a big ____", audio: "I see a big frog. Type the word frog.", correct: "frog" },
+                    { display: "Look at the full ____", audio: "Look at the full moon. Type the word moon.", correct: "moon" },
+                    { display: "Open the heavy ____", audio: "Open the heavy door. Type the word door.", correct: "door" },
+                    { display: "A swimming ____", audio: "A swimming fish. Type the word fish.", correct: "fish" },
+                    { display: "The tree is ____", audio: "The tree is tall. Type the word tall.", correct: "tall" },
+                    { display: "A bright shiny ____", audio: "A bright shiny star. Type the word star.", correct: "star" },
+                    { display: "The little brown ____", audio: "The little brown mouse. Type the word mouse.", correct: "mouse" },
+                    { display: "The red racing ____", audio: "The red racing car. Type the word car.", correct: "car" },
+                    { display: "The apple is ____", audio: "The apple is red. Type the word red.", correct: "red" },
+                    { display: "The sky is ____", audio: "The sky is blue. Type the word blue.", correct: "blue" },
+                    { display: "The grass is ____", audio: "The grass is green. Type the word green.", correct: "green" },
+                    { display: "Her flower is ____", audio: "Her flower is pink. Type the word pink.", correct: "pink" },
+                    { display: "The bright morning ____", audio: "The bright morning sun. Type the word sun.", correct: "sun" },
+                    { display: "Cold drops of ____", audio: "Cold drops of rain. Type the word rain.", correct: "rain" },
+                    { display: "The blowing winter ____", audio: "The blowing winter wind. Type the word wind.", correct: "wind" },
+                    { display: "The ice is ____", audio: "The ice is cold. Type the word cold.", correct: "cold" },
+                    { display: "A massive pirate ____", audio: "A massive pirate ship. Type the word ship.", correct: "ship" },
+                    { display: "Row the little ____", audio: "Row the little boat. Type the word boat.", correct: "boat" },
+                    { display: "The yellow baby ____", audio: "The yellow baby duck. Type the word duck.", correct: "duck" },
+                    { display: "A singing sweet ____", audio: "A singing sweet bird. Type the word bird.", correct: "bird" },
+                    { display: "Climb up the ____", audio: "Climb up the tree. Type the word tree.", correct: "tree" },
+                    { display: "A green falling ____", audio: "A green falling leaf. Type the word leaf.", correct: "leaf" },
+                    { display: "Throw a small ____", audio: "Throw a small rock. Type the word rock.", correct: "rock" },
+                    { display: "Wipe off the ____", audio: "Wipe off the dirt. Type the word dirt.", correct: "dirt" },
+                    { display: "Play in the ____", audio: "Play in the sand. Type the word sand.", correct: "sand" },
+                    { display: "Watch the ocean ____", audio: "Watch the ocean wave. Type the word wave.", correct: "wave" },
+                    { display: "Read a good ____", audio: "Read a good book. Type the word book.", correct: "book" },
+                    { display: "Write with a ____", audio: "Write with a pen. Type the word pen.", correct: "pen" },
+                    { display: "Sit at your ____", audio: "Sit at your desk. Type the word desk.", correct: "desk" },
+                    { display: "Turn on the ____", audio: "Turn on the lamp. Type the word lamp.", correct: "lamp" },
+                    { display: "Sleep in your ____", audio: "Sleep in your bed. Type the word bed.", correct: "bed" },
+                    { display: "Step on the ____", audio: "Step on the rug. Type the word rug.", correct: "rug" },
+                    { display: "Put it in the ____", audio: "Put it in the box. Type the word box.", correct: "box" },
+                    { display: "Pack your school ____", audio: "Pack your school bag. Type the word bag.", correct: "bag" },
+                    { display: "Wear a warm ____", audio: "Wear a warm hat. Type the word hat.", correct: "hat" },
+                    { display: "Put on your ____", audio: "Put on your coat. Type the word coat.", correct: "coat" },
+                    { display: "Tie your left ____", audio: "Tie your left shoe. Type the word shoe.", correct: "shoe" },
+                    { display: "A clean white ____", audio: "A clean white sock. Type the word sock.", correct: "sock" },
+                    { display: "Drink a glass of ____", audio: "Drink a glass of milk. Type the word milk.", correct: "milk" },
+                    { display: "Bake a sweet ____", audio: "Bake a sweet cake. Type the word cake.", correct: "cake" },
+                    { display: "Eat a juicy ____", audio: "Eat a juicy apple. Type the word apple.", correct: "apple" },
+                    { display: "A sweet yellow ____", audio: "A sweet yellow pear. Type the word pear.", correct: "pear" },
+                    { display: "A purple round ____", audio: "A purple round plum. Type the word plum.", correct: "plum" },
+                    { display: "The squirrel found a ____", audio: "The squirrel found a nut. Type the word nut.", correct: "nut" },
+                    { display: "Plant a tiny ____", audio: "Plant a tiny seed. Type the word seed.", correct: "seed" },
+                    { display: "A yellow cob of ____", audio: "A yellow cob of corn. Type the word corn.", correct: "corn" },
+                    { display: "Cook the fresh ____", audio: "Cook the fresh meat. Type the word meat.", correct: "meat" },
+                    { display: "A hot bowl of ____", audio: "A hot bowl of soup. Type the word soup.", correct: "soup" },
+                    { display: "Hold my right ____", audio: "Hold my right hand. Type the word hand.", correct: "hand" },
+                    { display: "Stomp your left ____", audio: "Stomp your left foot. Type the word foot.", correct: "foot" },
+                    { display: "Wipe your little ____", audio: "Wipe your little nose. Type the word nose.", correct: "nose" },
+                    { display: "Brush your long ____", audio: "Brush your long hair. Type the word hair.", correct: "hair" },
+                    { display: "Close your tired ____", audio: "Close your tired eyes. Type the word eyes.", correct: "eyes" },
+                    { display: "Listen with your ____", audio: "Listen with your ears. Type the word ears.", correct: "ears" },
+                    { display: "Open your wide ____", audio: "Open your wide mouth. Type the word mouth.", correct: "mouth" },
+                    { display: "Clean your white ____", audio: "Clean your white teeth. Type the word teeth.", correct: "teeth" },
+                    { display: "Raise your left ____", audio: "Raise your left arm. Type the word arm.", correct: "arm" },
+                    { display: "Bend your right ____", audio: "Bend your right leg. Type the word leg.", correct: "leg" },
+                    { display: "The crown of the ____", audio: "The crown of the king. Type the word king.", correct: "king" },
+                    { display: "The palace of the ____", audio: "The palace of the queen. Type the word queen.", correct: "queen" },
+                    { display: "A gold shiny ____", audio: "A gold shiny ring. Type the word ring.", correct: "ring" },
+                    { display: "Hear the bird ____", audio: "Hear the bird sing. Type the word sing.", correct: "sing" },
+                    { display: "Listen to the ____", audio: "Listen to the song. Type the word song.", correct: "song" },
+                    { display: "The bird hurt its ____", audio: "The bird hurt its wing. Type the word wing.", correct: "wing" },
+                    { display: "Ring the loud ____", audio: "Ring the loud bell. Type the word bell.", correct: "bell" },
+                    { display: "Bounce the big ____", audio: "Bounce the big ball. Type the word ball.", correct: "ball" },
+                    { display: "Play with your ____", audio: "Play with your doll. Type the word doll.", correct: "doll" },
+                    { display: "Paint the brick ____", audio: "Paint the brick wall. Type the word wall.", correct: "wall" },
+                    { display: "Climb up the ____", audio: "Climb up the hill. Type the word hill.", correct: "hill" },
+                    { display: "Walk along the ____", audio: "Walk along the path. Type the word path.", correct: "path" },
+                    { display: "Drive down the ____", audio: "Drive down the road. Type the word road.", correct: "road" },
+                    { display: "Run around the ____", audio: "Run around the park. Type the word park.", correct: "park" },
+                    { display: "Play in the ____", audio: "Play in the yard. Type the word yard.", correct: "yard" },
+                    { display: "The red house ____", audio: "The red house roof. Type the word roof.", correct: "roof" },
+                    { display: "Close the wooden ____", audio: "Close the wooden gate. Type the word gate.", correct: "gate" },
+                    { display: "Stay safe at ____", audio: "Stay safe at home. Type the word home.", correct: "home" },
+                    { display: "Clean your dirty ____", audio: "Clean your dirty room. Type the word room.", correct: "room" },
+                    { display: "Buy toys at the ____", audio: "Buy toys at the shop. Type the word shop.", correct: "shop" },
+                    { display: "Fish love to ____", audio: "Fish love to swim. Type the word swim.", correct: "swim" },
+                    { display: "Frogs love to ____", audio: "Frogs love to jump. Type the word jump.", correct: "jump" },
+                    { display: "Let us go out and ____", audio: "Let us go out and skip. Type the word skip.", correct: "skip" },
+                    { display: "Do not trip when you ____", audio: "Do not trip when you run. Type the word run.", correct: "run" },
+                    { display: "We can take a long ____", audio: "We can take a long walk. Type the word walk.", correct: "walk" },
+                    { display: "The bunny can ____", audio: "The bunny can hop. Type the word hop.", correct: "hop" },
+                    { display: "Please come and ____", audio: "Please come and sit. Type the word sit.", correct: "sit" },
+                    { display: "Please get up and ____", audio: "Please get up and stand. Type the word stand.", correct: "stand" },
+                    { display: "Go to bed and ____", audio: "Go to bed and sleep. Type the word sleep.", correct: "sleep" },
+                    { display: "Come outside and ____", audio: "Come outside and play. Type the word play.", correct: "play" },
+                    { display: "The fast car is ____", audio: "The fast car is fast. Type the word fast.", correct: "fast" },
+                    { display: "The turtle is ____", audio: "The turtle is slow. Type the word slow.", correct: "slow" },
+                    { display: "The bird flies ____", audio: "The bird flies high. Type the word high.", correct: "high" },
+                    { display: "The ground is ____", audio: "The ground is low. Type the word low.", correct: "low" },
+                    { display: "The blue pool is ____", audio: "The blue pool is deep. Type the word deep.", correct: "deep" },
+                    { display: "The night is ____", audio: "The night is dark. Type the word dark.", correct: "dark" },
+                    { display: "The white pillow is ____", audio: "The white pillow is soft. Type the word soft.", correct: "soft" },
+                    { display: "The brown rock is ____", audio: "The brown rock is hard. Type the word hard.", correct: "hard" },
+                    { display: "The radio is ____", audio: "The radio is loud. Type the word loud.", correct: "loud" },
+                    { display: "Always be very ____", audio: "Always be very kind. Type the word kind.", correct: "kind" }
+                ]
+            },
+            {
+                levelName: "Level 8",
+                questions: [
+                    {story: "The brown bear found a sweet honey pot under a tall tree. He ate it all up with a big silver spoon.",
+        question: "What did the brown bear find?",
+        choices: ["A honey pot", "A silver spoon", "A tall tree"],
+        correct: "A honey pot",
+        audio: "Read the story. What did the brown bear find?"
+    },
+    {
+        story: "A little green frog sat on a wet lily pad. He saw a buzzing fly and caught it with his long tongue.",
+        question: "What did the frog catch?",
+        choices: ["A wet lily pad", "A buzzing fly", "A long snake"],
+        correct: "A buzzing fly",
+        audio: "Read the story. What did the frog catch?"
+    },
+    {
+        story: "The fluffy white cat chased a ball of pink yarn. The yarn rolled under the soft blue sofa and stopped.",
+        question: "Where did the pink yarn roll?",
+        choices: ["Under the sofa", "On top of a box", "Into the garden"],
+        correct: "Under the sofa",
+        audio: "Read the story. Where did the pink yarn roll?"
+    },
+    {
+        story: "A yellow duck swam across the quiet pond. Three tiny gray fish swam right behind her in a straight line.",
+        question: "What color were the tiny fish?",
+        choices: ["Yellow duck", "Tiny gray", "Bright orange"],
+        correct: "Tiny gray",
+        audio: "Read the story. What color were the tiny fish?"
+    },
+    {
+        story: "The brown squirrel collected a big brown acorn. She hid it deep inside the soft green grass near the fence.",
+        question: "Where did the squirrel hide the acorn?",
+        choices: ["Inside the grass", "Up in a tree", "Under a fence"],
+        correct: "Inside the grass",
+        audio: "Read the story. Where did the squirrel hide the acorn?"
+    },
+    {
+        story: "A happy black puppy barked at a little brown rabbit. The rabbit hopped quickly into a dark hole.",
+        question: "Where did the rabbit hop?",
+        choices: ["Into a dark hole", "On a black puppy", "Over a big log"],
+        correct: "Into a dark hole",
+        audio: "Read the story. Where did the rabbit hop?"
+    },
+    {
+        story: "The tall pink flamingo stood on one leg in the mud. She dipped her long beak into the water to look for food.",
+        question: "How many legs did the flamingo stand on?",
+        choices: ["Two legs", "One leg", "Three legs"],
+        correct: "One leg",
+        audio: "Read the story. How many legs did the flamingo stand on?"
+    },
+    {
+        story: "A slow green turtle crawled along the dusty path. He pulled his head inside his hard shell to take a long nap.",
+        question: "Why did the turtle pull his head inside his shell?",
+        choices: ["To eat food", "To take a nap", "To run fast"],
+        correct: "To take a nap",
+        audio: "Read the story. Why did the turtle pull his head inside his shell?"
+    },
+    {
+        story: "The grey owl sat on a thick branch at night. He opened his big yellow eyes and looked at the glowing stars.",
+        question: "When did the owl sit on the branch?",
+        choices: ["At night", "In the morning", "At lunchtime"],
+        correct: "At night",
+        audio: "Read the story. When did the owl sit on the branch?"
+    },
+    {
+        story: "A little yellow chick broke out of a white egg shell. He chirped loudly and ran to his big brown mother hen.",
+        question: "Who did the little chick run to?",
+        choices: ["A white egg shell", "A brown mother hen", "A yellow duck"],
+        correct: "A brown mother hen",
+        audio: "Read the story. Who did the little chick run to?"
+    },
+    {
+        story: "The shiny black beetle climbed up a yellow sunflower petal. A warm gust of wind blew him down into the dirt.",
+        question: "What blew the shiny black beetle down?",
+        choices: ["A sunflower petal", "A gust of wind", "A little chick"],
+        correct: "A gust of wind",
+        audio: "Read the story. What blew the shiny black beetle down?"
+    },
+    {
+        story: "A giant grey elephant drank cold water with his long trunk. He sprayed the water over his hot back to cool down.",
+        question: "What did the elephant use to drink water?",
+        choices: ["His long trunk", "A big silver spoon", "His hot back"],
+        correct: "His long trunk",
+        audio: "Read the story. What did the elephant use to drink water?"
+    },
+    {
+        story: "The orange fox walked quietly through the white snow. He saw a tiny field mouse hiding near an old wooden barn.",
+        question: "What did the orange fox see?",
+        choices: ["A tiny field mouse", "An old wooden barn", "White fluffy snow"],
+        correct: "A tiny field mouse",
+        audio: "Read the story. What did the orange fox see?"
+    },
+    {
+        story: "A playful monkey swung from a long green vine. He reached out and grabbed a ripe yellow banana from a tree.",
+        question: "What fruit did the monkey grab?",
+        choices: ["A red apple", "A yellow banana", "A sweet strawberry"],
+        correct: "A yellow banana",
+        audio: "Read the story. What fruit did the monkey grab?"
+    },
+    {
+        story: "The busy bee flew from a purple flower to a red flower. She collected sweet yellow dust to make sweet honey.",
+        question: "Where did the bee fly from?",
+        choices: ["A purple flower", "A red flower", "A sweet honey pot"],
+        correct: "A purple flower",
+        audio: "Read the story. Where did the bee fly from?"
+    },
+    {
+        story: "A white goat chewed on a green bush. She found a discarded blue hat on the ground and ate that too!",
+        question: "What color was the hat that the goat ate?",
+        choices: ["Green bush", "Blue hat", "White goat"],
+        correct: "Blue hat",
+        audio: "Read the story. What color was the hat that the goat ate?"
+    },
+    {
+        story: "The green caterpillar crawled slowly on a fresh leaf. He bit a tiny round hole right through the middle of it.",
+        question: "What did the green caterpillar make in the leaf?",
+        choices: ["A fresh leaf", "A tiny round hole", "A slow crawl"],
+        correct: "A tiny round hole",
+        audio: "Read the story. What did the green caterpillar make in the leaf?"
+    },
+    {
+        story: "A loyal dog sat by the front door. He wagged his tail when he heard his owner jingle the silver house keys.",
+        question: "When did the dog wag his tail?",
+        choices: ["When he heard keys", "When he ate honey", "When he ran away"],
+        correct: "When he heard keys",
+        audio: "Read the story. When did the dog wag his tail?"
+    },
+    {
+        story: "The baby kangaroo sat cozy inside her mother's soft pouch. She popped her head out to look at a flying butterfly.",
+        question: "Where was the baby kangaroo sitting?",
+        choices: ["Inside a pouch", "On a tree branch", "In the cold snow"],
+        correct: "Inside a pouch",
+        audio: "Read the story. Where was the baby kangaroo sitting?"
+    },
+    {
+        story: "A shiny gold fish blew three bubbles in the glass tank. The biggest bubble popped when it touched a green plastic plant.",
+        question: "What made the biggest bubble pop?",
+        choices: ["A gold fish", "A plastic plant", "Three small bubbles"],
+        correct: "A plastic plant",
+        audio: "Read the story. What made the biggest bubble pop?"
+    },
+
+    // === 21-40: OUTDOOR & NATURE ===
+    {
+        story: "Emma put on her yellow rain boots. She walked into the muddy backyard and jumped into a big water puddle.",
+        question: "What did Emma jump into?",
+        choices: ["A big puddle", "A green bush", "The muddy backyard"],
+        correct: "A big puddle",
+        audio: "Read the story. What did Emma jump into?"
+    },
+    {
+        story: "The bright sun shone on the strawberry patch. Tim picked five sweet red berries and put them in his white basket.",
+        question: "How many berries did Tim pick?",
+        choices: ["Three berries", "Five berries", "Ten berries"],
+        correct: "Five berries",
+        audio: "Read the story. How many berries did Tim pick?"
+    },
+    {
+        story: "A strong wind blew across the open park. It caught Lily's purple kite and lifted it high into the gray clouds.",
+        question: "Whose kite did the wind lift up?",
+        choices: ["Tim's kite", "Lily's kite", "Emma's kite"],
+        correct: "Lily's kite",
+        audio: "Read the story. Whose kite did the wind lift up?"
+    },
+    {
+        story: "Ben found a smooth gray stone near the rushing river. He threw it into the water and watched it make a splash.",
+        question: "Where did Ben find the smooth gray stone?",
+        choices: ["Near the river", "In a white basket", "Under the sofa"],
+        correct: "Near the river",
+        audio: "Read the story. Where did Ben find the smooth gray stone?"
+    },
+    {
+        story: "The autumn leaves fell from the old maple tree. Red, orange, and yellow leaves made a thick carpet on the grass.",
+        question: "What kind of tree did the leaves fall from?",
+        choices: ["A maple tree", "An oak tree", "A plastic plant"],
+        correct: "A maple tree",
+        audio: "Read the story. What kind of tree did the leaves fall from?"
+    },
+    {
+        story: "Anna walked down the sandy beach. She collected four white sea shells and put them next to her sand castle.",
+        question: "What did Anna collect on the beach?",
+        choices: ["White sea shells", "Smooth gray stones", "Yellow rain boots"],
+        correct: "White sea shells",
+        audio: "Read the story. What did Anna collect on the beach?"
+    },
+    {
+        story: "A cold raindrop landed right on top of Sam's nose. He looked up at the sky and opened his big red umbrella.",
+        question: "Where did the raindrop land?",
+        choices: ["On Sam's nose", "On a red umbrella", "In a muddy puddle"],
+        correct: "On Sam's nose",
+        audio: "Read the story. Where did the raindrop land?"
+    },
+    {
+        story: "The tall grass in the meadow waved back and forth. A little brown grasshopper hopped from one blade to another.",
+        question: "What animal hopped through the meadow grass?",
+        choices: ["A grasshopper", "A field mouse", "A green frog"],
+        correct: "A grasshopper",
+        audio: "Read the story. What animal hopped through the meadow grass?"
+    },
+    {
+        story: "Jake helped his dad plant a small apple tree. They dug a deep hole in the dirt and watered the roots with a green can.",
+        question: "What kind of tree did Jake and his dad plant?",
+        choices: ["An apple tree", "A maple tree", "An old oak tree"],
+        correct: "An apple tree",
+        audio: "Read the story. What kind of tree did Jake and his dad plant?"
+    },
+    {
+        story: "The morning dew made the spider web sparkle like silver. A small spider sat right in the center waiting for breakfast.",
+        question: "What made the spider web sparkle?",
+        choices: ["The morning dew", "A silver key", "The bright sun"],
+        correct: "The morning dew",
+        audio: "Read the story. What made the spider web sparkle?"
+    },
+    {
+        story: "Chloe sat on a wooden bench at the playground. She watched her brother slide down the tall blue slide.",
+        question: "What did Chloe's brother do?",
+        choices: ["He went down a slide", "He dug a deep hole", "He picked berries"],
+        correct: "He went down a slide",
+        audio: "Read the story. What did Chloe's brother do?"
+    },
+    {
+        story: "A big apple fell from the tree branch with a loud thud. It rolled into the tall grass where a deer was standing.",
+        question: "What animal was standing in the tall grass?",
+        choices: ["A deer", "A brown bear", "A puppy"],
+        correct: "A deer",
+        audio: "Read the story. What animal was standing in the tall grass?"
+    },
+    {
+        story: "The snow fell softly all through the cold night. In the morning, Luke built a snowman with a carrot nose.",
+        question: "What did Luke use to make the snowman's nose?",
+        choices: ["A carrot", "A smooth stone", "An acorn"],
+        correct: "A carrot",
+        audio: "Read the story. What did Luke use to make the snowman's nose?"
+    },
+    {
+        story: "Sonia found a tiny bird nest in the hedge. Inside the nest were three small blue eggs that were very warm.",
+        question: "What was inside the bird nest?",
+        choices: ["Three blue eggs", "A green caterpillar", "A little chick"],
+        correct: "Three blue eggs",
+        audio: "Read the story. What was inside the bird nest?"
+    },
+    {
+        story: "The sun went down behind the high purple mountains. The sky turned bright orange and then dark pink.",
+        question: "What color did the sky turn first?",
+        choices: ["Bright orange", "Dark pink", "Deep purple"],
+        correct: "Bright orange",
+        audio: "Read the story. What color did the sky turn first?"
+    },
+    {
+        story: "Zoe walked up a winding forest path. She stopped to look at a thick patch of soft green moss on an old log.",
+        question: "What did Zoe stop to look at?",
+        choices: ["Soft green moss", "A tiny bird nest", "A high mountain"],
+        correct: "Soft green moss",
+        audio: "Read the story. What did Zoe stop to look at?"
+    },
+    {
+        story: "A loud thunder clap shook the glass windows. Maya sat inside on the rug and watched the lightning flash.",
+        question: "Where did Maya sit during the storm?",
+        choices: ["Inside on the rug", "In the backyard", "On a wooden bench"],
+        correct: "Inside on the rug",
+        audio: "Read the story. Where did Maya sit during the storm?"
+    },
+    {
+        story: "Leo threw a red stick into the lake. His big black dog swam out into the water to bring it back to him.",
+        question: "What did Leo throw into the lake?",
+        choices: ["A red stick", "A gray stone", "A striped ball"],
+        correct: "A red stick",
+        audio: "Read the story. What did Leo throw into the lake?"
+    },
+    {
+        story: "The rose bush in the front yard grew three beautiful red flowers. They smelled very sweet in the morning air.",
+        question: "How did the red flowers smell?",
+        choices: ["Very sweet", "Like fresh water", "Like a carrot"],
+        correct: "Very sweet",
+        audio: "Read the story. How did the red flowers smell?"
+    },
+    {
+        story: "An ice cube melted quickly on the hot sidewalk. It turned into a small pool of clear water that disappeared.",
+        question: "Where did the ice cube melt?",
+        choices: ["On the hot sidewalk", "In a glass tank", "Under the sofa"],
+        correct: "On the hot sidewalk",
+        audio: "Read the story. Where did the ice cube melt?"
+    },
+
+    // === 41-60: TOYS, GAMES & LEARNING ===
+    {
+        story: "Nina built a giant tower out of red plastic blocks. She placed a yellow block right on the very top.",
+        question: "What color block was on the top of the tower?",
+        choices: ["Yellow block", "Red plastic block", "Blue block"],
+        correct: "Yellow block",
+        audio: "Read the story. What color block was on the top of the tower?"
+    },
+    {
+        story: "Paul opened his blue toy box. He pulled out his favorite green race car and rolled it across the floor.",
+        question: "What color was Paul's favorite race car?",
+        choices: ["Green", "Blue", "Red"],
+        correct: "Green",
+        audio: "Read the story. What color was Paul's favorite race car?"
+    },
+    {
+        story: "Lucy got out her paint brush and a jar of blue paint. She painted a giant ocean wave on her white paper.",
+        question: "What did Lucy paint on her paper?",
+        choices: ["An ocean wave", "A red flower", "A giant tower"],
+        correct: "An ocean wave",
+        audio: "Read the story. What did Lucy paint on her paper?"
+    },
+    {
+        story: "Jack played with his wooden train set. The black engine pulled three red cars around a circular track.",
+        question: "What color was the train engine?",
+        choices: ["Black engine", "Red cars", "Wooden track"],
+        correct: "Black engine",
+        audio: "Read the story. What color was the train engine?"
+    },
+    {
+        story: "Mia put on her roller skates. She zipped down the smooth concrete driveway and waved at her mom.",
+        question: "Where did Mia skate?",
+        choices: ["Down the driveway", "In the living room", "On the sandy beach"],
+        correct: "Down the driveway",
+        audio: "Read the story. Where did Mia skate?"
+    },
+    {
+        story: "Sam loved to read his big book about dinosaurs. The book had a bright green cover with a scary T-Rex on it.",
+        question: "What color was the cover of Sam's book?",
+        choices: ["Bright green", "Deep blue", "Soft white"],
+        correct: "Bright green",
+        audio: "Read the story. What color was the cover of Sam's book?"
+    },
+    {
+        story: "Ella blew a giant soap bubble in the kitchen. It floated up to the ceiling and popped with a wet click.",
+        question: "Where did the soap bubble pop?",
+        choices: ["At the ceiling", "On the kitchen floor", "On Sam's nose"],
+        correct: "At the ceiling",
+        audio: "Read the story. Where did the soap bubble pop?"
+    },
+    {
+        story: "Toby spun his metal top on the wooden table. It spun around and around until it bumped into a coffee cup.",
+        question: "What did the spinning top bump into?",
+        choices: ["A coffee cup", "A plastic block", "A toy box"],
+        correct: "A coffee cup",
+        audio: "Read the story. What did the spinning top bump into?"
+    },
+    {
+        story: "Grace drew a big happy sun with a yellow crayon. She added five orange rays to make it look bright.",
+        question: "What tool did Grace use to draw the sun?",
+        choices: ["A yellow crayon", "A blue paint brush", "A silver spoon"],
+        correct: "A yellow crayon",
+        audio: "Read the story. What tool did Grace use to draw the sun?"
+    },
+    {
+        story: "Oliver looked through his plastic toy binoculars. He saw a gray pigeon sitting on top of the red brick garage.",
+        question: "What bird did Oliver see?",
+        choices: ["A gray pigeon", "A little chick", "A blue bird"],
+        correct: "A gray pigeon",
+        audio: "Read the story. What bird did Oliver see?"
+    },
+    {
+        story: "The white jigsaw puzzle piece fell on the floor. Lily found it hiding right underneath her purple slipper.",
+        question: "Where did Lily find the puzzle piece?",
+        choices: ["Under her slipper", "Inside the toy box", "Near the river"],
+        correct: "Under her slipper",
+        audio: "Read the story. Where did Lily find the puzzle piece?"
+    },
+    {
+        story: "Ryan kicked his black and white soccer ball. It flew over the low bush and landed in the neighbor's yard.",
+        question: "Where did the soccer ball land?",
+        choices: ["In the neighbor's yard", "Over a high hill", "Under the sofa"],
+        correct: "In the neighbor's yard",
+        audio: "Read the story. Where did the soccer ball land?"
+    },
+    {
+        story: "Molly played her little wooden drum. She tapped it three times with a pair of thin brown sticks.",
+        question: "How many times did Molly tap her drum?",
+        choices: ["Three times", "Five times", "One time"],
+        correct: "Three times",
+        audio: "Read the story. How many times did Molly tap her drum?"
+    },
+    {
+        story: "Dan used purple chalk to draw on the sidewalk. He made a long hopscotch game with ten square boxes.",
+        question: "What color was Dan's chalk?",
+        choices: ["Purple chalk", "Yellow crayon", "Blue paint"],
+        correct: "Purple chalk",
+        audio: "Read the story. What color was Dan's chalk?"
+    },
+    {
+        story: "The brown teddy bear sat on the white bed. He wore a red bow tie around his soft furry neck.",
+        question: "What did the teddy bear wear?",
+        choices: ["A red bow tie", "A blue hat", "Yellow rain boots"],
+        correct: "A red bow tie",
+        audio: "Read the story. What did the teddy bear wear?"
+    },
+    {
+        story: "Sophie opened a new box of play dough. She rolled out a flat circle and made a green play dough star.",
+        question: "What shape did Sophie make with the play dough?",
+        choices: ["A green star", "A round hole", "A square box"],
+        correct: "A green star",
+        audio: "Read the story. What shape did Sophie make with the play dough?"
+    },
+    {
+        story: "Alex flew his small paper airplane inside the house. It sailed through the air and landed right in the fruit bowl.",
+        question: "Where did the paper airplane land?",
+        choices: ["In the fruit bowl", "Under her slipper", "On the white bed"],
+        correct: "In the fruit bowl",
+        audio: "Read the story. Where did the paper airplane land?"
+    },
+    {
+        story: "Katie jumped rope on the school playground. She jumped ten times without stopping once to take a breath.",
+        question: "Where did Katie jump rope?",
+        choices: ["On the playground", "In the kitchen", "Down the driveway"],
+        correct: "On the playground",
+        audio: "Read the story. Where did Katie jump rope?"
+    },
+    {
+        story: "Liam set up his toy bowling pins in the hallway. He rolled a heavy blue ball and knocked down four pins.",
+        question: "How many pins did Liam knock down?",
+        choices: ["Four pins", "Ten pins", "Three pins"],
+        correct: "Four pins",
+        audio: "Read the story. How many pins did Liam knock down?"
+    },
+    {
+        story: "The bright musical toy played a happy song. Maya pushed the big green button to make the music stop.",
+        question: "What button did Maya push to stop the music?",
+        choices: ["The green button", "The red button", "The wide key"],
+        correct: "The green button",
+        audio: "Read the story. What button did Maya push to stop the music?"
+    },
+
+    // === 61-80: DAILY LIFE, VEHICLES & HOUSEHOLD ===
+    {
+        story: "The big red fire truck drove past with a loud siren. It flashed bright white lights into the dark street.",
+        question: "What color was the fire truck?",
+        choices: ["Red truck", "Black engine", "Yellow car"],
+        correct: "Red truck",
+        audio: "Read the story. What color was the fire truck?"
+    },
+    {
+        story: "Dad made hot oatmeal for breakfast. He put a big slice of yellow butter right in the middle of the bowl.",
+        question: "What did Dad put in the oatmeal?",
+        choices: ["Yellow butter", "Sweet honey", "A red carrot"],
+        correct: "Yellow butter",
+        audio: "Read the story. What did Dad put in the oatmeal?"
+    },
+    {
+        story: "The green garbage truck stopped at the corner. A trash man picked up the heavy black bin and dumped it.",
+        question: "What color was the garbage truck?",
+        choices: ["Green", "Black", "Red"],
+        correct: "Green",
+        audio: "Read the story. What color was the garbage truck?"
+    },
+    {
+        story: "Leo put his dirty white socks into the washing machine. He closed the round door and pushed the start button.",
+        question: "What did Leo put in the washing machine?",
+        choices: ["Dirty white socks", "A paper airplane", "A black bin"],
+        correct: "Dirty white socks",
+        audio: "Read the story. What did Leo put in the washing machine?"
+    },
+    {
+        story: "The yellow school bus beeped its horn twice. Clara ran out the front door with her heavy blue backpack.",
+        question: "How many times did the bus horn beep?",
+        choices: ["Twice", "Three times", "Once"],
+        correct: "Twice",
+        audio: "Read the story. How many times did the bus horn beep?"
+    },
+    {
+        story: " Grandma baked a large tray of chocolate chip cookies. The sweet smell filled the whole kitchen.",
+        question: "What kind of cookies did Grandma bake?",
+        choices: ["Chocolate chip", "Sweet honey", "Oatmeal cookies"],
+        correct: "Chocolate chip",
+        audio: "Read the story. What kind of cookies did Grandma bake?"
+    },
+    {
+        story: "A large white boat sailed across the blue lake. It left a long line of white foam in the deep water.",
+        question: "Where did the white boat sail?",
+        choices: ["Across the lake", "Down the driveway", "Near the river"],
+        correct: "Across the lake",
+        audio: "Read the story. Where did the white boat sail?"
+    },
+    {
+        story: "Mila used a metal spoon to eat her cold strawberry yogurt. She dropped a bit on her clean pink shirt.",
+        question: "What did Mila eat her yogurt with?",
+        choices: ["A metal spoon", "A thin stick", "Her long tongue"],
+        correct: "A metal spoon",
+        audio: "Read the story. What did Mila eat her yogurt with?"
+    },
+    {
+        story: "The loud alarm clock rang at seven in the morning. Peter opened one eye and pulled up his warm blanket.",
+        question: "What time did the alarm clock ring?",
+        choices: ["At seven", "At night", "At noon"],
+        correct: "At seven",
+        audio: "Read the story. What time did the alarm clock ring?"
+    },
+    {
+        story: "The silver airplane flew high above the white clouds. It looked like a tiny metal bird in the sky.",
+        question: "What did the silver airplane look like?",
+        choices: ["A tiny bird", "A grey owl", "A fast rocket"],
+        correct: "A tiny bird",
+        audio: "Read the story. What did the silver airplane look like?"
+    },
+    {
+        story: "The brown mail carrier left a big square box on the porch. It had a white paper label with Tom's name.",
+        question: "Where did the mail carrier leave the box?",
+        choices: ["On the porch", "In the hallway", "Near the fence"],
+        correct: "On the porch",
+        audio: "Read the story. Where did the mail carrier leave the box?"
+    },
+    {
+        story: "Maya brushed her teeth with a pink toothbrush. She rinsed her mouth out with cold water from a blue cup.",
+        question: "What color was Maya's toothbrush?",
+        choices: ["Pink", "Blue", "White"],
+        correct: "Pink",
+        audio: "Read the story. What color was Maya's toothbrush?"
+    },
+    {
+        story: "The red tractor pulled a wagon full of yellow straw. The farmer drove it slowly into the big barn.",
+        question: "What was inside the farmer's wagon?",
+        choices: ["Yellow straw", "Red apples", "Chocolate cookies"],
+        correct: "Yellow straw",
+        audio: "Read the story. What was inside the farmer's wagon?"
+    },
+    {
+        story: " Lucas helped water the indoor house plants. He used a small glass pitcher filled with fresh tap water.",
+        question: "What did Lucas use to water the plants?",
+        choices: ["A glass pitcher", "A green can", "A metal spoon"],
+        correct: "A glass pitcher",
+        audio: "Read the story. What did Lucas use to water the plants?"
+    },
+    {
+        story: "A white delivery van parked on the narrow street. A driver got out holding a bunch of yellow bananas.",
+        question: "What color was the delivery van?",
+        choices: ["White", "Green", "Red"],
+        correct: "White",
+        audio: "Read the story. What color was the delivery van?"
+    },
+    {
+        story: "The black cat slept on top of the warm television. She woke up when the volume got too loud.",
+        question: "Where was the black cat sleeping?",
+        choices: ["On the television", "Under the sofa", "On the white bed"],
+        correct: "On the television",
+        audio: "Read the story. Where was the black cat sleeping?"
+    },
+    {
+        story: "Dad sliced a red watermelon on the kitchen counter. He gave the first big juicy piece to little Lily.",
+        question: "What fruit did Dad slice up?",
+        choices: ["Watermelon", "Apple", "Banana"],
+        correct: "Watermelon",
+        audio: "Read the story. What fruit did Dad slice up?"
+    },
+    {
+        story: "The family drove their blue car to the grocery store. They bought a carton of milk and a loaf of fresh bread.",
+        question: "Where did the family drive their car?",
+        choices: ["To the store", "Up a high hill", "To the beach"],
+        correct: "To the store",
+        audio: "Read the story. Where did the family drive their car?"
+    },
+    {
+        story: "A small gray bird built a nest on top of the porch light. She brought pieces of brown string in her beak.",
+        question: "Where did the gray bird build her nest?",
+        choices: ["On the porch light", "In a green bush", "In a maple tree"],
+        correct: "On the porch light",
+        audio: "Read the story. Where did the gray bird build her nest?"
+    },
+    {
+        story: "Elena drank a cup of warm apple cider. It had a brown cinnamon stick floating right at the top.",
+        question: "What was floating in Elena's warm drink?",
+        choices: ["A cinnamon stick", "An ice cube", "A sweet berry"],
+        correct: "A cinnamon stick",
+        audio: "Read the story. What was floating in Elena's warm drink?"
+    },
+
+    // === 81-100: MAGIC, FANTASY & IMAGINATION ===
+    {
+        story: "The friendly green dragon blew a cloud of purple smoke. The smoke turned into a group of tiny butterflies.",
+        question: "What color was the friendly dragon?",
+        choices: ["Green", "Purple", "Red"],
+        correct: "Green",
+        audio: "Read the story. What color was the friendly dragon?"
+    },
+    {
+        story: "A little fairy with silver wings slept inside a yellow flower. She woke up when a drop of rain hit her nose.",
+        question: "What color were the little fairy's wings?",
+        choices: ["Silver wings", "Silver key", "Yellow wings"],
+        correct: "Silver wings",
+        audio: "Read the story. What color were the little fairy's wings?"
+    },
+    {
+        story: "The golden star fell out of the sky. It landed softly right on top of a dark purple wizard hat.",
+        question: "What fell out of the sky?",
+        choices: ["A golden star", "A wizard hat", "A soap bubble"],
+        correct: "A golden star",
+        audio: "Read the story. What fell out of the sky?"
+    },
+    {
+        story: "A tiny brown elf lived inside an old leather boot. He used a white button as a tiny dinner plate.",
+        question: "What did the elf use as a dinner plate?",
+        choices: ["A white button", "An old boot", "A smooth stone"],
+        correct: "A white button",
+        audio: "Read the story. What did the elf use as a dinner plate?"
+    },
+    {
+        story: "The magic tree grew purple apples. If you took a small bite, you could jump as high as a house!",
+        question: "What color apples grew on the magic tree?",
+        choices: ["Purple apples", "Red apples", "Green apples"],
+        correct: "Purple apples",
+        audio: "Read the story. What color apples grew on the magic tree?"
+    },
+    {
+        story: "A shiny blue mermaid swam with a pink sea horse. They hunted for hidden pirate gold in a deep cave.",
+        question: "Who did the blue mermaid swim with?",
+        choices: ["A pink sea horse", "A gold fish", "A green dragon"],
+        correct: "A pink sea horse",
+        audio: "Read the story. Who did the blue mermaid swim with?"
+    },
+    {
+        story: "The toy soldier came alive at midnight. He stood up straight and marched around the bedroom rug three times.",
+        question: "When did the toy soldier come alive?",
+        choices: ["At midnight", "At seven", "In the morning"],
+        correct: "At midnight",
+        audio: "Read the story. When did the toy soldier come alive?"
+    },
+    {
+        story: "A white unicorn walked across a colorful rainbow bridge. Her golden horn sparkled brightly in the sun.",
+        question: "What animal walked across the rainbow bridge?",
+        choices: ["A unicorn", "A flamingo", "A white goat"],
+        correct: "A unicorn",
+        audio: "Read the story. What animal walked across the rainbow bridge?"
+    },
+    {
+        story: "The magic carpet flew over the city streets. It carried a young prince who wore a heavy golden crown.",
+        question: "What did the young prince wear on his head?",
+        choices: ["A golden crown", "A wizard hat", "A blue hat"],
+        correct: "A golden crown",
+        audio: "Read the story. What did the young prince wear on his head?"
+    },
+    {
+        story: "A friendly green alien lived on a tiny pink planet. He had three big eyes and a long blue tail.",
+        question: "How many eyes did the friendly alien have?",
+        choices: ["Three eyes", "One eye", "Five eyes"],
+        correct: "Three eyes",
+        audio: "Read the story. How many eyes did the friendly alien have?"
+    },
+    {
+        story: "The talking tree opened its big bark mouth. It told a funny story to the little birds sitting on its branch.",
+        question: "Who did the talking tree tell a story to?",
+        choices: ["The little birds", "A green dragon", "A young prince"],
+        correct: "The little birds",
+        audio: "Read the story. Who did the talking tree tell a story to?"
+    },
+    {
+        story: "A giant castle stood high in the white clouds. It had four tall red flags waving on the roof.",
+        question: "How many flags were on the castle roof?",
+        choices: ["Four flags", "Three flags", "Ten flags"],
+        correct: "Four flags",
+        audio: "Read the story. How many flags were on the castle roof?"
+    },
+    {
+        story: "The pirate captain found an old paper map. It showed a path to a wooden chest full of shiny silver coins.",
+        question: "What did the pirate captain find?",
+        choices: ["An old paper map", "A wooden chest", "Shiny silver coins"],
+        correct: "An old paper map",
+        audio: "Read the story. What did the pirate captain find?"
+    },
+    {
+        story: "A small purple monster lived under the kitchen sink. He loved to eat crunchy yellow potato chips at night.",
+        question: "Where did the small purple monster live?",
+        choices: ["Under the sink", "Inside a toy box", "In a deep cave"],
+        correct: "Under the sink",
+        audio: "Read the story. Where did the small purple monster live?"
+    },
+    {
+        story: "The magic mirror spoke with a soft clear voice. It told the queen that she had a lovely smile.",
+        question: "How did the magic mirror speak?",
+        choices: ["With a soft voice", "With a loud roar", "With a jingle"],
+        correct: "With a soft voice",
+        audio: "Read the story. How did the magic mirror speak?"
+    },
+    {
+        story: "A flying bicycle rode past the round white moon. It left a sparkling trail of gold dust in the night sky.",
+        question: "What was flying past the round white moon?",
+        choices: ["A bicycle", "A silver airplane", "A paper airplane"],
+        correct: "A bicycle",
+        audio: "Read the story. What was flying past the round white moon?"
+    },
+    {
+        story: "The magic paintbrush could bring drawings to life. Tim drew a red strawberry and it turned into real food!",
+        question: "What did Tim draw with the magic paintbrush?",
+        choices: ["A red strawberry", "A green star", "An ocean wave"],
+        correct: "A red strawberry",
+        audio: "Read the story. What did Tim draw with the magic paintbrush?"
+    },
+    {
+        story: "A tiny cloud floated inside the living room. It rained a few drops of real lemonade onto the dining table.",
+        question: "What did the tiny cloud rain down?",
+        choices: ["Lemonade", "Cold water", "Sweet honey"],
+        correct: "Lemonade",
+        audio: "Read the story. What did the tiny cloud rain down?"
+    },
+    {
+        story: "The wizard mixed green liquid and blue liquid together. It made a funny pink bubble that floated up and sang.",
+        question: "What did the wizard's mixture turn into?",
+        choices: ["A singing bubble", "A golden star", "A purple cloud"],
+        correct: "A singing bubble",
+        audio: "Read the story. What did the wizard's mixture turn into?"
+    },
+    {
+        story: "A little clockwork mouse ran without any batteries. You just had to turn the silver key on its side twice.",
+        question: "What did you turn to make the clockwork mouse run?",
+        choices: ["A silver key", "A green button", "A wide key"],
+        correct: "A silver key",
+        audio: "Read the story. What did you turn to make the clockwork mouse run?"
+                    },
+                    {
+                        story: "The little blue bird found a shiny golden key under a big green leaf. She flew to the old oak tree and opened a tiny wooden box. Inside, she found a bright red strawberry!",
+                        question: "What did the little blue bird find inside the box?",
+                        choices: ["A shiny key", "A red strawberry", "A green leaf"],
+                        correct: "A red strawberry",
+                        audio: "Read the story. What did the little blue bird find inside the box?"
+                    },
+                    {
+                        story: "Max the puppy loved the sunny beach. He dug a deep hole in the yellow sand and found a striped ball. He pushed it with his nose all the way into the blue ocean water.",
+                        question: "Where did Max push the striped ball?",
+                        choices: ["Into a deep hole", "Into the blue ocean water", "Under the yellow sand"],
+                        correct: "Into the blue ocean water",
+                        audio: "Read the story. Where did Max push the striped ball?"
+                    },
+                    {
+                        story: "Leo the astronaut put on his silver helmet and climbed into the rocket. The engines made a loud roar! He flew past the glowing moon and waved at a friendly green alien.",
+                        question: "Who did Leo wave at as he flew past the moon?",
+                        choices: ["A friendly green alien", "A silver rocket", "A shining star"],
+                        correct: "A friendly green alien",
+                        audio: "Read the story. Who did Leo wave at as he flew past the moon?"
+                    },
+                    {
+                        story: "The red car drove up the high hill. The wind was blowing hard and the trees were shaking. At the top of the hill, the driver saw a beautiful rainbow in the sky.",
+                        question: "What did the driver see at the top of the hill?",
+                        choices: ["A fast rocket", "A beautiful rainbow", "A big green leaf"],
+                        correct: "A beautiful rainbow",
+                        audio: "Read the story. What did the driver see at the top of the hill?"
+                    },
+                    {
+                        story: "Mia went to the backyard garden with her grandpa. They found a family of tiny brown snails hiding under a flower pot. Mia gave them a small drop of fresh water.",
+                        question: "What did Mia give to the tiny brown snails?",
+                        choices: ["A small drop of water", "A bright red strawberry", "A yellow striped ball"],
+                        correct: "A small drop of water",
+                        audio: "Read the story. What did Mia give to the tiny brown snails?"
+                    }
+                ]
+            }
+        ];
+
+        // === STATE MANAGEMENT ===
+        let currentLevelIndex = 0;
+        let currentQuestionIndex = 0;
+        let shuffledQuestions = []; 
+        let isWaiting = false; 
+        
+        let currentLevelScore = 0;
+        let isFirstTryForQuestion = true;
+        let currentSpellingIndex = 0; // Tracks sequence parsing within spelling/guided layout engines
+        let strictTypedWord = "";     // Tracks characters accumulated within strict typing engine mode
+
+        // Defensive Hydration Logic
+        let completedScores = JSON.parse(localStorage.getItem('readingGameScores')) || {};
+        for (let i = 0; i < 8; i++) {
+            if (completedScores[i] === undefined) {
+                completedScores[i] = null;
+            }
+        }
+
+        let advancedUnlocked = localStorage.getItem('advancedModeUnlocked') === 'true';
+
+        // === DOM ELEMENTS ===
+        const homeScreen = document.getElementById('home-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const displayText = document.getElementById('display-text');
+        const listenBtn = document.getElementById('listen-btn');
+        const optionsArea = document.getElementById('options-area');
+        const homeBtn = document.getElementById('home-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const expandBtn = document.getElementById('expand-btn');
+        const advancedColumn = document.getElementById('advanced-column');
+
+        // === SHUFFLE HELPER ===
+        function shuffleArray(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // === UI UPDATER FOR HOME MENU ===
+        function updateHomeMenu() {
+            for (let i = 0; i < 8; i++) {
+                const scoreSpan = document.getElementById(`score-${i}`);
+                const btn = document.querySelector(`.level-btn[data-level="${i}"]`);
+                
+                if (!btn || !scoreSpan) continue;
+
+                const savedScore = completedScores[i];
+
+                if (savedScore !== null) {
+                    scoreSpan.textContent = `${savedScore}/10`;
+                    if (i < 4) {
+                        btn.disabled = true; 
+                    } else {
+                        btn.disabled = false;
+                    }
+                } else {
+                    scoreSpan.textContent = '';
+                    btn.disabled = false; 
+                }
+            }
+
+            // Clean toggle parsing applied natively directly to the right layout column
+            if (advancedUnlocked) {
+                advancedColumn.classList.remove('hidden');
+            } else {
+                advancedColumn.classList.add('hidden');
+            }
+            expandBtn.innerText = advancedUnlocked ? "−" : "+";
+        }
+
+        // === STABLE AUDIO ENGINE FOR MOBILE IOS ===
+        let _voice = null;
+        let activeUtterance = null; // Global instance placeholder to block iOS Garbage Collection dropping callbacks mid-speech
+
+        function _pickVoice() {
+            const list = window.speechSynthesis.getVoices();
+            if (!list.length) return; 
+
+            _voice =
+                list.find(v => v.name === 'Samantha')                        
+                || list.find(v => v.name === 'Karen')                        
+                || list.find(v => v.lang === 'en-US' && v.localService)     
+                || list.find(v => v.lang.startsWith('en') && v.localService)
+                || list.find(v => v.lang.startsWith('en'))                   
+                || list[0];                                                   
+        }
+
+        _pickVoice();
+        window.speechSynthesis.onvoiceschanged = _pickVoice;
+
+        function speak(text, callback) {
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+            window.speechSynthesis.cancel();
+
+            setTimeout(() => {
+                activeUtterance = new SpeechSynthesisUtterance(text);
+                activeUtterance.lang   = 'en-US';
+                activeUtterance.rate   = 0.70; 
+                activeUtterance.pitch  = 1.0;
+                activeUtterance.volume = 1.0;
+
+                if (_voice) activeUtterance.voice = _voice;
+
+                if (callback) {
+                    activeUtterance.onend = () => {
+                        callback();
+                    };
+                }
+
+                window.speechSynthesis.speak(activeUtterance);
+            }, 50);
+        }
+
+        setInterval(() => window.speechSynthesis.paused && window.speechSynthesis.resume(), 14000);
+
+        // === APP NAVIGATION ACTIONS ===
+        document.querySelectorAll('.level-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                currentLevelIndex = parseInt(e.target.getAttribute('data-level'));
+                currentQuestionIndex = 0; 
+                currentLevelScore = 0; 
+                
+                let allQuestions = [...gameData[currentLevelIndex].questions];
+                shuffledQuestions = shuffleArray(allQuestions).slice(0, Math.min(10, allQuestions.length));
+
+                homeScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                
+                loadQuestion();
+            });
+        });
+
+        expandBtn.addEventListener('click', () => {
+            advancedUnlocked = !advancedUnlocked;
+            localStorage.setItem('advancedModeUnlocked', advancedUnlocked ? 'true' : 'false');
+            updateHomeMenu();
+            speak(advancedUnlocked ? "Advanced levels revealed." : "Advanced levels hidden.");
+        });
+
+        homeBtn.addEventListener('click', () => {
+            window.speechSynthesis.cancel();
+            gameScreen.classList.add('hidden');
+            homeScreen.classList.remove('hidden');
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (!confirm("Erase all scores and start over?")) return;
+            completedScores = { 0: null, 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null };
+            localStorage.removeItem('readingGameScores');
+            updateHomeMenu();
+            speak("Scores reset.");
+        });
+
+        listenBtn.addEventListener('click', () => {
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+            speak(currentQ.audio);
+        });
+
+        // === CORE GAME ENGINE ===
+        function loadQuestion() {
+            isWaiting = false; 
+            isFirstTryForQuestion = true; 
+            const currentLevel = gameData[currentLevelIndex];
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+
+            progressIndicator.innerText = `${currentLevel.levelName} - Question ${currentQuestionIndex + 1} / ${shuffledQuestions.length}`;
+
+            // Reset dynamic innerHTML presentation parameters
+            displayText.innerHTML = '';
+            optionsArea.innerHTML = '';
+
+            if (currentLevelIndex === 6) {
+                // === BRANCH EXECUTION: LEVEL 7 KEYBOARD INPUT TYPING ENGINE ===
+                currentSpellingIndex = 0;
+                strictTypedWord = "";
+                renderKeyboardDisplay();
+                speak(currentQ.audio);
+
+                optionsArea.innerHTML = '';
+                const keyboardContainer = document.createElement('div');
+                keyboardContainer.className = 'keyboard-container';
+
+                const rows = [
+                    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+                    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+                    ['DELETE', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'ENTER']
+                ];
+
+                rows.forEach(rowKeys => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'keyboard-row';
+                    rowKeys.forEach(key => {
+                        const btn = document.createElement('button');
+                        btn.className = 'key-btn';
+                        if (key === 'DELETE' || key === 'ENTER') {
+                            btn.classList.add('wide-key');
+                            btn.innerText = key === 'DELETE' ? '⌫' : '✔';
+                            if (currentQuestionIndex < 5) {
+                                btn.style.opacity = '0.25'; // Fade non-functional keys inside Guided Mode limits
+                            }
+                        } else {
+                            btn.innerText = key;
+                        }
+                        btn.addEventListener('click', () => handleKeyboardKey(key));
+                        rowDiv.appendChild(btn);
+                    });
+                    keyboardContainer.appendChild(rowDiv);
+                });
+                optionsArea.appendChild(keyboardContainer);
+
+            } else if (currentLevelIndex === 5) {
+                // === BRANCH EXECUTION: LEVEL 6 PHONICS SPELLING ENGINE ===
+                currentSpellingIndex = 0;
+                renderSpellingDisplay();
+                speak(currentQ.audio);
+
+                const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
+                shuffledChoices.forEach(letter => {
+                    const btn = document.createElement('button');
+                    btn.className = 'action-btn';
+                    btn.innerText = letter;
+                    btn.style.minWidth = '100px'; // Optimization scaling for single character layouts
+                    btn.style.textTransform = 'lowercase';
+                    btn.addEventListener('click', () => handleLetterTap(letter, btn));
+                    optionsArea.appendChild(btn);
+                });
+
+            } else if (currentLevelIndex === 7) {
+                // === BRANCH EXECUTION: LEVEL 8 SHORT STORY COMPREHENSION ENGINE ===
+                speak(currentQ.audio);
+
+                displayText.innerHTML = `
+                    <div style="font-size: 1.8rem; font-weight: 500; line-height: 1.7; color: #222222; text-align: left; max-width: 720px; margin: 0 auto; width: 100%; user-select: none;">${currentQ.story}</div>
+                    <div style="border-bottom: 2px dashed #dddddd; margin: 20px auto; max-width: 720px; width: 100%;"></div>
+                    <div style="font-size: 1.5rem; font-weight: bold; line-height: 1.4; color: #555555; text-align: left; max-width: 720px; margin: 0 auto; width: 100%;">${currentQ.question}</div>
+                `;
+
+                const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
+                shuffledChoices.forEach(choice => {
+                    const btn = document.createElement('button');
+                    btn.className = 'action-btn';
+                    btn.innerText = choice;
+                    // Scale option tap targets slightly for multi-word story phrase choices
+                    btn.style.fontSize = '1.8rem';
+                    btn.style.padding = '16px 32px';
+                    btn.style.minHeight = '76px';
+                    btn.addEventListener('click', () => handleChoice(choice, currentQ.correct));
+                    optionsArea.appendChild(btn);
+                });
+
+            } else {
+                // === STANDARD BRANCH: LEVEL 1-5 WORDS RECOGNITION ENGINE ===
+                displayText.innerText = currentQ.display;
+                speak(currentQ.audio);
+
+                const shuffledChoices = [...currentQ.choices].sort(() => Math.random() - 0.5);
+                shuffledChoices.forEach(choice => {
+                    const btn = document.createElement('button');
+                    btn.className = 'action-btn';
+                    btn.innerText = choice;
+                    btn.addEventListener('click', () => handleChoice(choice, currentQ.correct));
+                    optionsArea.appendChild(btn);
+                });
+            }
+        }
+
+        // Renders Level 6 Letter Slots Underneath Sentences Safely
+        function renderSpellingDisplay() {
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+            const word = currentQ.correct;
+            let visualStr = "";
+            for (let i = 0; i < word.length; i++) {
+                if (i < currentSpellingIndex) {
+                    visualStr += word[i] + " ";
+                } else {
+                    visualStr += "_ ";
+                }
+            }
+            displayText.innerHTML = `
+                <div style="font-size: 2.2rem; font-weight: normal; margin-bottom: 12px; color: #555555;">${currentQ.display}</div>
+                <div style="font-size: 4.5rem; font-weight: bold; color: #222222; letter-spacing: 12px; text-transform: lowercase;">${visualStr.trim()}</div>
+            `;
+        }
+
+        // Renders Level 7 Interactive Sentence and Word Spaces with Submodes
+        function renderKeyboardDisplay() {
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+            const word = currentQ.correct;
+            let visualStr = "";
+            
+            if (currentQuestionIndex < 5) {
+                // Guided Mode structural formatting
+                for (let i = 0; i < word.length; i++) {
+                    if (i < currentSpellingIndex) {
+                        visualStr += word[i] + " ";
+                    } else {
+                        visualStr += "_ ";
+                    }
+                }
+            } else {
+                // Strict Mode open buffer formatting
+                for (let i = 0; i < word.length; i++) {
+                    if (i < strictTypedWord.length) {
+                        visualStr += strictTypedWord[i] + " ";
+                    } else {
+                        visualStr += "_ ";
+                    }
+                }
+            }
+
+            const submodeText = currentQuestionIndex < 5 ? "Guided Mode" : "Strict Mode";
+            const submodeColor = currentQuestionIndex < 5 ? "#4CAF50" : "#E53935";
+
+            displayText.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: bold; color: ${submodeColor}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 2px;">${submodeText}</div>
+                <div style="font-size: 2.2rem; font-weight: normal; margin-bottom: 12px; color: #555555;">${currentQ.display}</div>
+                <div style="font-size: 4.5rem; font-weight: bold; color: #222222; letter-spacing: 12px; text-transform: lowercase;">${visualStr.trim()}</div>
+            `;
+        }
+
+        // Logic processing matrix for Level 7 letter sequence inputs
+        function handleKeyboardKey(key) {
+            if (isWaiting) return;
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+            const targetWord = currentQ.correct;
+
+            if (currentQuestionIndex < 5) {
+                // --- SUBMODE 1: GUIDED MATRIX ---
+                if (key === 'DELETE' || key === 'ENTER') return; // Blocks non-typing key functionality natively
+                
+                const expectedLetter = targetWord[currentSpellingIndex];
+                if (key === expectedLetter) {
+                    currentSpellingIndex++;
+                    speak(key);
+                    renderKeyboardDisplay();
+
+                    if (currentSpellingIndex === targetWord.length) {
+                        isWaiting = true;
+                        if (isFirstTryForQuestion) {
+                            currentLevelScore++;
+                        }
+                        speak("Correct! " + targetWord, advanceGame);
+                    }
+                } else {
+                    isFirstTryForQuestion = false;
+                    speak(key); // Acoustic character name feedback on rejected keystroke
+                }
+            } else {
+                // --- SUBMODE 2: STRICT MATRIX ---
+                if (key === 'DELETE') {
+                    if (strictTypedWord.length > 0) {
+                        strictTypedWord = strictTypedWord.slice(0, -1);
+                        speak("delete");
+                        renderKeyboardDisplay();
+                    }
+                } else if (key === 'ENTER') {
+                    if (strictTypedWord.toLowerCase() === targetWord.toLowerCase()) {
+                        isWaiting = true;
+                        if (isFirstTryForQuestion) {
+                            currentLevelScore++;
+                        }
+                        speak("Correct! " + targetWord, advanceGame);
+                    } else {
+                        isFirstTryForQuestion = false;
+                        speak("Try again");
+                    }
+                } else {
+                    if (strictTypedWord.length < targetWord.length) {
+                        strictTypedWord += key;
+                        speak(key);
+                        renderKeyboardDisplay();
+                    }
+                }
+            }
+        }
+
+        // Logic processing matrix for Level 6 letter sequence taps
+        function handleLetterTap(selectedLetter, buttonElement) {
+            if (isWaiting) return;
+            const currentQ = shuffledQuestions[currentQuestionIndex];
+            const targetWord = currentQ.correct;
+            const expectedLetter = targetWord[currentSpellingIndex];
+
+            if (selectedLetter === expectedLetter) {
+                currentSpellingIndex++;
+                speak(selectedLetter);
+                
+                // Vanish tile node cleanly upon accurate sequencing alignment
+                buttonElement.style.visibility = 'hidden';
+                renderSpellingDisplay();
+
+                if (currentSpellingIndex === targetWord.length) {
+                    isWaiting = true;
+                    if (isFirstTryForQuestion) {
+                        currentLevelScore++;
+                    }
+                    speak("Correct! " + targetWord, advanceGame);
+                }
+            } else {
+                isFirstTryForQuestion = false;
+                speak(selectedLetter); // Acoustic naming validation on erroneous attempts
+            }
+        }
+
+        // Standard validation matrix processing for Multi-Choice selections
+        function handleChoice(selectedChoice, correctChoice) {
+            if (isWaiting) return; 
+
+            if (selectedChoice === correctChoice) {
+                isWaiting = true;
+                
+                if (isFirstTryForQuestion) {
+                    currentLevelScore++;
+                }
+
+                speak("Correct!", advanceGame);
+            } else {
+                isFirstTryForQuestion = false; 
+                speak(selectedChoice);
+            }
+        }
+
+        function advanceGame() {
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex >= shuffledQuestions.length) { 
+                completedScores[currentLevelIndex] = currentLevelScore;
+                localStorage.setItem('readingGameScores', JSON.stringify(completedScores));
+                
+                currentQuestionIndex = 0;
+                
+                updateHomeMenu();
+                gameScreen.classList.add('hidden');
+                homeScreen.classList.remove('hidden');
+                
+                speak("Great job! You finished the level.");
+                return;
+            }
+            
+            loadQuestion();
+        }
+
+        updateHomeMenu();
+    </script>
+</body>
+</html>
